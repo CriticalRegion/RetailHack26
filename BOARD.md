@@ -16,5 +16,5 @@
 | t13-streamlit-polish | @tudor | done | - | app.py:164 |
 | t14-live-verify | @infosui | done | - | - |
 | t15-ui-restyle | @abhi | done | - | - |
-| t16-ui-shell-restyle | @abhi | doing | - | files: web/src/App.tsx, web/src/components/{Stepper,KpiHero,Timeline}.tsx (classNames only); do: restyle per web/STYLE.md (Flux UI look: zinc, hairline cards, Inter, small badges instead of tinted cards, quieter header, KPI values zinc-900 with status badge, Recharts colours per STYLE.md); keep testids/labels/behaviour; done: npm --prefix web run build OK + browser check, pushed by 19:15; owner hint: CriticalRegion |
+| t16-ui-shell-restyle | @abhi | done | - | - |
 | t17-ui-intake-restyle | @abhi | done | - | - |

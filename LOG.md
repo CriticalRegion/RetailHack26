@@ -121,3 +121,4 @@
 18:56 @abhi DONE t17-ui-intake-restyle -> - (usage: out 8k, in 3.6M)
 18:57 @abhi t16 (@abhi): builder subagent restyling App/Stepper/KpiHero/Timeline, ETA 19:05; not stuck
 18:57 @abhi STUCK (autonomous): no progress after 3 tries on: Finish your task t16-ui-shell-restyle (files: web/src/App.tsx, web/src/components/{Stepper,KpiHero,Timeline}.tsx (classNames only); do: restyle per web/STYLE.md (Flux UI look: zinc, hairline cards, Inter, small badges instead of tinted cards, quieter header, KPI values zinc-900 with status badge, Recharts colours per STYLE.md); keep testids/labels/behaviour; done: npm --prefix web run build OK + browser check, pushed by 19:15; owner hint: CriticalRegion), then /handoff t16-ui-shell-restyle <path:line>.
+18:57 @abhi DONE t16-ui-shell-restyle -> - (usage: out 12k, in 6.7M)
