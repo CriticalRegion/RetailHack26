@@ -15,7 +15,7 @@ function Tile({ label, value, sub, tone, dark = false }: { label: string; value:
         <span className={`text-sm font-medium ${dark ? "text-zinc-300" : "text-zinc-500"}`}>{label}</span>
         <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${pill[tone]}`}>{word[tone]}</span>
       </div>
-      <div className="mt-4 whitespace-nowrap text-4xl font-semibold tabular-nums tracking-tight xl:text-5xl">{value}</div>
+      <div className={`mt-4 whitespace-nowrap font-semibold tabular-nums tracking-tight ${String(value).length > 6 ? "text-3xl xl:text-4xl" : "text-4xl xl:text-5xl"}`}>{value}</div>
       {sub && <div className={`mt-2 text-sm ${dark ? "text-zinc-400" : "text-zinc-500"}`}>{sub}</div>}
     </div>
   );
