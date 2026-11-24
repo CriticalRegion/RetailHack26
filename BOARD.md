@@ -23,4 +23,4 @@
 | t20-judge-qa | @abhi | done | - | - |
 | t21-pitch | @abhi | done | - | - |
 | t22-ui-v2 | @infosui | done | - | - |
-| t23-owner-layout | @infosui | doing | - | files: web/src/App.tsx, web/src/v2/{Week,Todo}.tsx (branch ui-owner); do: shop-owner information layout (week strip + to-do card); done: walk green by 19:45 then merge, else drop |
+| t23-owner-layout | @infosui | done | - | - |

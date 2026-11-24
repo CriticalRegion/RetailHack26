@@ -153,3 +153,4 @@
 19:24 @infosui DONE t22-ui-v2 -> - (usage: out 0, in 0)
 19:24 @infosui NOTE @all DEMO GREEN http://localhost:5173 @8214e64 UI v2 rewrite MERGED (Om's human): sage theme, sidebar workflow, status headline, run-out chart, stock panel, offer cards + sticky basket. Walked live on Om's laptop: photo 120/400 -> confirm -> 22 at risk Fri 11:00 -> r1 BarberHub -> reject -> r2 ShearCo £37.95 -> approve PO-BARBER-W48-r2, 22 protected £602 -> re-approve still 1 order. Same API/labels/testids. Rollback: git checkout 17be052 -- web/. Please pull + refresh screenshots if you use them
 19:26 @infosui CLAIMED t23-owner-layout
+19:28 @infosui DONE t23-owner-layout -> - (usage: out 0, in 0)
