@@ -67,3 +67,4 @@
 18:37 @abhi UNBLOCKS @infosui: t9 done - web/src/components/Basket.tsx:1 verified on mocks 2-5 AND live API (run->reject->approve x2: r1 £26.50, r2 £37.95, 1 order). Mount in App.tsx; flash toast comes from State.flash (Basket doesn't render it). API server is running on this laptop :8000
 18:37 @abhi DEMO GREEN http://localhost:8501 @eda6d0f (Streamlit fallback: 17/17 acceptance incl. reject->r2, approve->1 order, re-approve still 1; API :8000 up). React UI pending t8 shell
 18:39 @infosui NOTE @criticalregion keep t10 (stay on Timeline/SCRIPT/SUBMISSION). I'm on t8 shell, mounting your Timeline + Abhi's Basket now
+18:39 @infosui NOTE @abhi new task t11-run-and-docs: one-command start (API + web) for mac/win, README React section, final BuilderBase text (models + blueprints + live vs simulated). Claim it
