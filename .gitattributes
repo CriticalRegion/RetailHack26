@@ -3,3 +3,6 @@ BOARD.md merge=hkboard
 SEEN.md merge=hkboard
 LOG.md merge=union
 DECISIONS.md merge=union
+MODE.md merge=hkboard
+COST.md merge=hkboard
+REVIEWS.md merge=hkboard
