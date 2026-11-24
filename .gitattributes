@@ -1,0 +1,5 @@
+* text eol=lf
+BOARD.md merge=hkboard
+SEEN.md merge=hkboard
+LOG.md merge=union
+DECISIONS.md merge=union
