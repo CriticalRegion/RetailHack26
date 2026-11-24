@@ -4,20 +4,22 @@ Streamlit flow: stock review -> run-out forecast -> supplier basket (approve / e
 remove / reject with feedback) -> simulated order with pending vs on-hand stock.
 
 Until iris.calc / iris.sourcing / iris.intake land, the app runs on the built-in
-FIXTURE below (labelled in the UI). t6 swaps the `forecast`, `source_offers` and
-`extract_*` adapters for the real modules.
+fixture forecast below. Intake is iris.intake, sourcing iris.agent, orders iris.orders.
 """
 from __future__ import annotations
 
 import math
-import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import altair as alt
+from dotenv import load_dotenv
 import pandas as pd
 import streamlit as st
 
+load_dotenv()  # NEBIUS_*, IRIS_*_MODEL, TAVILY_API_KEY from .env (never committed)
+
+from iris import intake, llm  # noqa: E402
 from iris.agent import SourcingAgent, diff, nebius_llm
 from iris.orders import OrderBook, OrderError, ProposalLine
 from iris.sourcing import TZ, FixtureAdapter, default_adapters
@@ -138,35 +140,6 @@ def to_lines(ap) -> list[ProposalLine]:
     return out
 
 
-def extract_text(text: str) -> list[dict]:
-    """FAKE text intake: '2 x Brand X Matte Clay 100 ml, 35 neck strips' -> review rows."""
-    rows = []
-    for part in re.split(r"[,\n;]+", text):
-        part = part.strip()
-        if not part:
-            continue
-        m = re.match(r"(\d+(?:\.\d+)?)\s*[x×]?\s*(.*)", part, re.I)
-        qty, label = (float(m.group(1)), m.group(2)) if m else (None, part)
-        sku = next((s for s, p in PRODUCTS.items() if any(a in label.lower() for a in p["aliases"])), None)
-        if sku == "clay-matte-100ml" and qty is not None:
-            size = re.search(r"(\d+)\s*ml", label, re.I)
-            qty = qty * (float(size.group(1)) if size else 100)
-        rows.append({"confirm": sku is not None and qty is not None, "raw label": part, "sku": sku or "?",
-                     "quantity": qty, "unit": PRODUCTS[sku]["unit"] if sku else "?",
-                     "note": "" if sku else "unmatched - pick a SKU"})
-    return rows
-
-
-def extract_photo(_img) -> list[dict]:
-    """FAKE photo intake: labelled replay of the staged shelf photo."""
-    return [
-        {"confirm": True, "raw label": "Northline Matte Clay 100ml x1 + 1 open (~20%)", "sku": "clay-matte-100ml",
-         "quantity": 120.0, "unit": "ml", "note": "open tub estimated"},
-        {"confirm": True, "raw label": "Neck strips box (4 x 100)", "sku": "neck-strips",
-         "quantity": 400.0, "unit": "units", "note": ""},
-    ]
-
-
 # ---------------------------------------------------------------- state
 def init_state():
     ss = st.session_state
@@ -220,6 +193,8 @@ with st.sidebar:
     st.write(f"**Shop:** Old St Barbers (demo)  \n**Clock:** {DEMO_NOW:%a %d %b %Y %H:%M} London")
     st.toggle("Live search (Tavily + Nebius)", key="live",
               help="Off: labelled fixture offers, repeatable. On: live listings; unverifiable ones stay leads.")
+    st.caption(f"Text intake: {'Nebius ' + llm.text_model() if llm.text_ready() else 'rule parser (fallback)'}  \n"
+               f"Photo intake: {'Nebius ' + llm.vision_model() if llm.vision_ready() else 'labelled replay (fallback)'}")
     st.warning("Synthetic bookings and stock (FAKE). Supplier offers: "
                + ("live search + fixture." if ss.get("live") else "labelled fixture.")
                + " Orders are simulated.")
@@ -242,11 +217,11 @@ with c1:
     with t_photo:
         img = st.file_uploader("Stocktake photo", type=["png", "jpg", "jpeg"])
         if st.button("Read photo", disabled=img is None):
-            ss.review = extract_photo(img)
+            ss.review = intake.extract("photo", img)
     with t_text:
         txt = st.text_area("Stock notes", "1 x Northline Matte Clay 100 ml, 380 neck strips", height=80)
         if st.button("Read text"):
-            ss.review = extract_text(txt)
+            ss.review = intake.extract("text", txt)
     if ss.review:
         st.caption("Review what Iris read. Only ticked rows overwrite on-hand stock.")
         edited = st.data_editor(pd.DataFrame(ss.review), key="review_editor", hide_index=True,
