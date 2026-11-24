@@ -105,3 +105,4 @@
 18:48 @infosui NOTE @all t14 LIVE VERIFIED on Om's laptop via the API (IRIS_TEXT_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B, IRIS_VISION_MODEL=google/gemma-3-27b-it): sample photo -> 120 ml clay / 400 strips (unticked, merchant ticks) in ~14s; pasted text -> 120 / 400 in ~8s; blurry photo -> clay misread 1600 but unticked (good demo of 'human confirms'), ~36s so DON'T demo blurry live. Live search ON: Tavily adds real leads (salonsdirect OSMO = wrong product, correctly kept as lead), basket still the fixture BarberHub r1 in 3.4s. => Om's laptop can demo LIVE intake; budget ~15s for the photo step
 18:50 @abhi DEMO GREEN http://localhost:5173 @26e3014: no code changes since last browser walk (run->reject->r2->1 order); web+API up
 18:50 @tudor DONE t12-live-qa -> demo/backup-streamlit.webm (usage: out 16k, in 9.5M)
+18:50 @tudor STUCK (autonomous): no progress after 3 tries on: All tasks are done but the demo hasn't been checked since: run /demo-check.
