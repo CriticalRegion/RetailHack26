@@ -47,6 +47,8 @@ class Session:
         self.review_source = ""
         self.agent: Optional[SourcingAgent] = None
         self.agent_prop = None
+        self.agent_prev = None
+        self.last_order_created = True
         self.live = False
         self.flash: Optional[dict] = None
 
@@ -169,6 +171,31 @@ def state() -> dict:
                                   "eta": iso(l.eta)} for l in o.lines]})
 
     n_prot, rev = protected_bookings(baseline, fc) if book.orders else (0, 0)
+
+    # "basket": the same proposal in the shape of web/src/components/basketTypes.ts (raw agent dump)
+    def agent_dump(p, status=None):
+        if p is None:
+            return None
+        d = p.model_dump(mode="json")
+        d["total"] = p.total
+        if status:
+            d["status"] = status
+        return d
+
+    basket = None
+    if ap is not None:
+        cur = agent_dump(ap, prop.status if prop is not None else None)
+        cur["changes"] = diff(S.agent_prev, ap) if S.agent_prev is not None else []
+        last = list(book.orders.values())[-1] if book.orders else None
+        order = None
+        if last is not None:
+            order = {"order_id": last.order_id, "revision": last.revision, "total": round(last.total, 2),
+                     "lines": [{"sku": l.sku, "supplier": l.supplier, "packs": l.packs, "units": l.units,
+                                "eta": iso(l.eta)} for l in last.lines],
+                     "created": S.last_order_created, "order_count": len(book.orders),
+                     "bookings_protected": n_prot, "revenue_covered": rev}
+        basket = {"proposal": cur, "previous": agent_dump(S.agent_prev, "rejected"), "order": order,
+                  "at_risk_times": [iso(b["time"]) for b in fc_before[HERO_SKU].at_risk]}
     hero = fc[HERO_SKU]
     hero_base = baseline[HERO_SKU]
     if book.orders:
@@ -200,6 +227,7 @@ def state() -> dict:
             "bookings_protected": n_prot, "revenue_covered": rev, "orders": len(book.orders)},
         "step": step,
         "proposal": proposal,
+        "basket": basket,
         "offers": offers,
         "history": history,
         "orders": orders,
@@ -323,6 +351,7 @@ def run():
         say("info", "No shortages: nothing to order.")
         return state()
     S.agent = make_agent(S.live)
+    S.agent_prev = None
     S.agent_prop = S.agent.propose(sh, now=DEMO_NOW.replace(tzinfo=TZ))
     S.book.propose(BASKET_ID, to_lines(S.agent_prop))
     say("success", "Iris found suppliers for every shortage." if S.book.latest(BASKET_ID).lines
@@ -339,6 +368,7 @@ def reject(body: RevisionIn):
     except OrderError as e:
         raise HTTPException(409, str(e))
     old = S.agent_prop
+    S.agent_prev = old
     S.agent_prop = S.agent.reject(old, feedback=body.feedback, now=DEMO_NOW.replace(tzinfo=TZ))
     S.book.propose(BASKET_ID, to_lines(S.agent_prop), feedback=body.feedback or "rejected",
                    excluded_offer_ids=S.agent_prop.excluded_offer_ids,
@@ -353,6 +383,7 @@ def approve(body: RevisionIn):
         order, created = S.book.approve(BASKET_ID, body.revision, DEMO_NOW)
     except OrderError as e:
         raise HTTPException(409, str(e))
+    S.last_order_created = created
     if created:
         say("success", f"Order {order.order_id} placed (simulated).")
     else:

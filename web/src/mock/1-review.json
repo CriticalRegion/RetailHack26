@@ -1066,6 +1066,7 @@
  },
  "step": "stock",
  "proposal": null,
+ "basket": null,
  "offers": [],
  "history": [],
  "orders": [],

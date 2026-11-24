@@ -1049,6 +1049,7 @@
  },
  "step": "forecast",
  "proposal": null,
+ "basket": null,
  "offers": [],
  "history": [],
  "orders": [],

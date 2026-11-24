@@ -1074,6 +1074,263 @@
    }
   ]
  },
+ "basket": {
+  "proposal": {
+   "basket_id": "bkt-e9daab11",
+   "revision": 1,
+   "created_at": "2026-11-24T09:00:00Z",
+   "lines": [
+    {
+     "sku": "clay-matte-100ml",
+     "product": "Northline Matte Clay 100 ml",
+     "unit": "ml",
+     "shortage": {
+      "sku": "clay-matte-100ml",
+      "required_qty": 103.0,
+      "need_by": "2026-11-27T11:00:00",
+      "first_at_risk_booking_id": "BK-030",
+      "affected_booking_ids": [
+       "BK-030",
+       "BK-031",
+       "BK-032",
+       "BK-033",
+       "BK-034",
+       "BK-035",
+       "BK-036",
+       "BK-037",
+       "BK-038",
+       "BK-039",
+       "BK-040",
+       "BK-041",
+       "BK-042",
+       "BK-043",
+       "BK-044",
+       "BK-045",
+       "BK-046",
+       "BK-047",
+       "BK-048",
+       "BK-049",
+       "BK-050",
+       "BK-051"
+      ],
+      "weekly_demand": 223.0,
+      "on_hand": 120.0,
+      "inbound": 0.0
+     },
+     "status": "proposed",
+     "selected": {
+      "offer": {
+       "offer_id": "fx-clay-barberhub",
+       "supplier": "BarberHub",
+       "title": "Northline Matte Clay 100 ml",
+       "brand": "Northline",
+       "variant": "Matte",
+       "item_size": 100.0,
+       "unit": "ml",
+       "items_per_pack": 1,
+       "pack_price": 11.5,
+       "shipping": 3.5,
+       "currency": "GBP",
+       "available_packs": 40,
+       "eta": "2026-11-25T09:00:00Z",
+       "evidence": {
+        "source": "fixture",
+        "label": "FIXTURE: Northline Matte Clay 100 ml (BarberHub)",
+        "url": null,
+        "retrieved_at": "2026-11-24T09:00:00Z",
+        "snippet": ""
+       }
+      },
+      "eligible": true,
+      "on_time": true,
+      "packs": 2,
+      "covered_qty": 200.0,
+      "delivered_cost": 26.5,
+      "issues": [],
+      "rank": 1
+     },
+     "alternative": {
+      "offer": {
+       "offer_id": "fx-clay-shearco",
+       "supplier": "ShearCo Supply",
+       "title": "Northline Matte Clay 100ml (3-pack)",
+       "brand": "Northline",
+       "variant": "Matte",
+       "item_size": 100.0,
+       "unit": "ml",
+       "items_per_pack": 3,
+       "pack_price": 33.0,
+       "shipping": 4.95,
+       "currency": "GBP",
+       "available_packs": 20,
+       "eta": "2026-11-26T09:00:00Z",
+       "evidence": {
+        "source": "fixture",
+        "label": "FIXTURE: Northline Matte Clay 100ml (3-pack) (ShearCo Supply)",
+        "url": null,
+        "retrieved_at": "2026-11-24T09:00:00Z",
+        "snippet": ""
+       }
+      },
+      "eligible": true,
+      "on_time": true,
+      "packs": 1,
+      "covered_qty": 300.0,
+      "delivered_cost": 37.95,
+      "issues": [],
+      "rank": 2
+     },
+     "late_option": {
+      "offer": {
+       "offer_id": "fx-clay-bulkbarber",
+       "supplier": "BulkBarber Wholesale",
+       "title": "Northline Matte Clay 100ml x6",
+       "brand": "Northline",
+       "variant": "Matte",
+       "item_size": 100.0,
+       "unit": "ml",
+       "items_per_pack": 6,
+       "pack_price": 54.0,
+       "shipping": 0.0,
+       "currency": "GBP",
+       "available_packs": 10,
+       "eta": "2026-11-30T09:00:00Z",
+       "evidence": {
+        "source": "fixture",
+        "label": "FIXTURE: Northline Matte Clay 100ml x6 (BulkBarber Wholesale)",
+        "url": null,
+        "retrieved_at": "2026-11-24T09:00:00Z",
+        "snippet": ""
+       }
+      },
+      "eligible": true,
+      "on_time": false,
+      "packs": 1,
+      "covered_qty": 600.0,
+      "delivered_cost": 54.0,
+      "issues": [],
+      "rank": 3
+     },
+     "leads": [
+      {
+       "offer": {
+        "offer_id": "fx-clay-wrongsize",
+        "supplier": "GroomDirect",
+        "title": "Northline Matte Clay 75ml travel size",
+        "brand": "Northline",
+        "variant": "Matte",
+        "item_size": 75.0,
+        "unit": "ml",
+        "items_per_pack": 1,
+        "pack_price": 7.99,
+        "shipping": 2.99,
+        "currency": "GBP",
+        "available_packs": 50,
+        "eta": "2026-11-25T09:00:00Z",
+        "evidence": {
+         "source": "fixture",
+         "label": "FIXTURE: Northline Matte Clay 75ml travel size (GroomDirect)",
+         "url": null,
+         "retrieved_at": "2026-11-24T09:00:00Z",
+         "snippet": ""
+        }
+       },
+       "eligible": false,
+       "on_time": true,
+       "packs": 2,
+       "covered_qty": 150.0,
+       "delivered_cost": 18.97,
+       "issues": [
+        "wrong size: 75 ml, need 100 ml"
+       ],
+       "rank": null
+      },
+      {
+       "offer": {
+        "offer_id": "fx-clay-noeta",
+        "supplier": "MarketSeller42",
+        "title": "Northline Matte Clay 100ml",
+        "brand": "Northline",
+        "variant": "Matte",
+        "item_size": 100.0,
+        "unit": "ml",
+        "items_per_pack": 1,
+        "pack_price": 9.49,
+        "shipping": null,
+        "currency": "GBP",
+        "available_packs": null,
+        "eta": null,
+        "evidence": {
+         "source": "fixture",
+         "label": "FIXTURE: Northline Matte Clay 100ml (MarketSeller42)",
+         "url": null,
+         "retrieved_at": "2026-11-24T09:00:00Z",
+         "snippet": ""
+        }
+       },
+       "eligible": false,
+       "on_time": null,
+       "packs": 2,
+       "covered_qty": 200.0,
+       "delivered_cost": 18.98,
+       "issues": [
+        "shipping cost not shown",
+        "delivery date unknown"
+       ],
+       "rank": null
+      }
+     ],
+     "reason": "2 × Northline Matte Clay 100 ml from BarberHub: £26.50 delivered, arrives Wed 25 Nov 09:00, covering 103 ml short before booking BK-030 (Fri 27 Nov 11:00).",
+     "constraints": {
+      "region": "UK",
+      "max_pack_price": null,
+      "max_total": null,
+      "excluded_offer_ids": [],
+      "excluded_suppliers": [],
+      "preferred_suppliers": []
+     },
+     "query": "\"Northline Matte Clay\" 100ml UK",
+     "sources": [
+      "fixture"
+     ]
+    }
+   ],
+   "status": "proposed",
+   "feedback": [],
+   "excluded_offer_ids": [],
+   "changed_skus": [
+    "clay-matte-100ml"
+   ],
+   "total": 26.5,
+   "changes": []
+  },
+  "previous": null,
+  "order": null,
+  "at_risk_times": [
+   "2026-11-27T11:00",
+   "2026-11-27T12:00",
+   "2026-11-27T13:00",
+   "2026-11-27T14:00",
+   "2026-11-27T15:00",
+   "2026-11-27T16:00",
+   "2026-11-27T17:00",
+   "2026-11-28T09:00",
+   "2026-11-28T10:00",
+   "2026-11-28T11:00",
+   "2026-11-28T12:00",
+   "2026-11-28T13:00",
+   "2026-11-28T14:00",
+   "2026-11-28T15:00",
+   "2026-11-28T16:00",
+   "2026-11-28T17:00",
+   "2026-11-30T09:00",
+   "2026-11-30T10:00",
+   "2026-11-30T11:00",
+   "2026-11-30T12:00",
+   "2026-11-30T13:00",
+   "2026-11-30T14:00"
+  ]
+ },
  "offers": [
   {
    "sku": "clay-matte-100ml",
