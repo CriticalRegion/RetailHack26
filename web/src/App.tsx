@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, getMode, type State } from "./api";
 import { Runout } from "./v2/Runout";
-import { Sourcing } from "./v2/Sourcing";
+import { Todo } from "./v2/Todo";
+import { Week } from "./v2/Week";
 import { Stock } from "./v2/Stock";
 import { Badge, Card, Spinner, Stat, gbp, when } from "./v2/ui";
 
@@ -215,56 +216,20 @@ export default function App() {
 
         <Headline state={state} />
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="min-w-0 space-y-6">
-            {hero && (
-              <Card>
-                <div className="flex flex-wrap items-start justify-between gap-3 px-6 pt-5">
-                  <div>
-                    <h3 className="text-[15px] font-semibold tracking-tight text-stone-900">{hero.name}</h3>
-                    <p className="mt-0.5 text-[13px] text-stone-500">
-                      Projected stock · {hero.usage} {hero.unit} booked this week · {hero.on_hand} on hand
-                    </p>
-                  </div>
-                  {hero.first_at_risk ? (
-                    <Badge tone="rose" dot>Short {hero.uncovered} {hero.unit} · {hero.at_risk_count} bookings</Badge>
-                  ) : (
-                    <Badge tone="emerald" dot>{hero.covered_by_order ? "Covered by the order" : "Covered"}</Badge>
-                  )}
-                </div>
-                <div className="px-3 pb-2 pt-2">
-                  <Runout line={hero} orderEta={etaFor(hero.sku)} height={320} />
-                </div>
-                {Object.keys(hero.contributing).length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 border-t border-[#e1e8dc] px-6 py-4 text-[12.5px] text-stone-500">
-                    Demand comes from
-                    {Object.entries(hero.contributing).map(([svc, n]) => (
-                      <span key={svc} className="rounded-full bg-[#e3eadf] px-2.5 py-1 font-semibold text-stone-700">
-                        {n} × {svc.toLowerCase()}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            )}
-            {others.length > 0 && (
-              <div className="grid gap-6 md:grid-cols-2">
-                {others.map((f) => (
-                  <Card key={f.sku} className="px-5 pt-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-[13.5px] font-semibold text-stone-900">{f.name}</div>
-                        <div className="text-[12px] text-stone-500">{f.usage} {f.unit} booked · {f.on_hand} on hand</div>
-                      </div>
-                      {f.first_at_risk ? <Badge tone="rose" dot>Runs out {when(f.first_at_risk.time)}</Badge> : <Badge tone="emerald" dot>Enough for 7 days</Badge>}
-                    </div>
-                    <Runout line={f} orderEta={etaFor(f.sku)} height={110} compact />
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+        <Week state={state} />
 
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+          <div className="min-w-0">
+            <Todo
+              state={state}
+              busy={busy}
+              pending={pending}
+              onRun={() => run(api.run, "run")}
+              onApprove={(rev) => run(() => api.approve(rev), "approve")}
+              onReject={(rev, fb) => run(() => api.reject(rev, fb), "reject")}
+              onReceived={(id) => run(() => api.received(id))}
+            />
+          </div>
           <Stock
             state={state}
             busy={busy}
@@ -277,19 +242,27 @@ export default function App() {
           />
         </div>
 
-        <section id="sourcing" aria-label="Supplier basket and order" className="scroll-mt-6">
-          <Sourcing
-            state={state}
-            busy={busy}
-            pending={pending}
-            onRun={() => run(api.run, "run")}
-            onReject={(rev, fb) => run(() => api.reject(rev, fb), "reject")}
-            onApprove={(rev) => run(() => api.approve(rev), "approve")}
-            onEdit={(sku, packs) => run(() => api.editLine(sku, packs))}
-            onRemove={(sku) => run(() => api.removeLine(sku))}
-            onReceived={(id) => run(() => api.received(id))}
-          />
-        </section>
+        <details className="group rounded-xl border border-[#d3dccd] bg-[#f6f8f3]">
+          <summary className="cursor-pointer select-none px-6 py-4 text-[14px] font-semibold text-stone-800 hover:text-stone-950">
+            Details · stock projection{state.history.length > 1 ? " and suggestion history" : ""}
+          </summary>
+          <div className="space-y-6 border-t border-[#e1e8dc] px-3 pb-5 pt-4">
+            {hero && <Runout line={hero} orderEta={etaFor(hero.sku)} height={300} />}
+            {others.map((f) => (
+              <div key={f.sku} className="px-3">
+                <div className="text-[13px] font-semibold text-stone-900">{f.name} <span className="font-normal text-stone-500">· {f.first_at_risk ? `runs out ${when(f.first_at_risk.time)}` : "enough for 7 days"}</span></div>
+                <Runout line={f} orderEta={etaFor(f.sku)} height={110} compact />
+              </div>
+            ))}
+            {state.history.length > 1 && (
+              <ol className="space-y-1 px-3 text-[12.5px] text-stone-600">
+                {state.history.map((h) => (
+                  <li key={h.revision}>Suggestion {h.revision} · {h.status} · {gbp(h.total)} · {h.lines.join(", ") || "(empty)"}{h.note ? ` · ${h.note}` : ""}</li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </details>
       </main>
 
       {toast && (
