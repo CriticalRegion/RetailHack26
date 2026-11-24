@@ -43,7 +43,7 @@ def _parse_json(txt: str) -> dict:
     return json.loads(m.group(0) if m else txt)
 
 
-def chat_json(system: str, user: str, max_tokens: int = 800) -> dict:
+def chat_json(system: str, user: str, max_tokens: int = 2000) -> dict:
     """Text LLM -> JSON object. Raises on missing config, timeout or bad JSON (callers fall back)."""
     client = _client("NEBIUS_BASE_URL")
     if client is None or not text_model():

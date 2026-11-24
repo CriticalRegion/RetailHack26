@@ -42,7 +42,10 @@ def _catalog(products: dict[str, ProductSpec]) -> str:
 
 SCHEMA = ('Return only JSON: {"items":[{"raw_label":str,"sku":str|null,"count":number|null,'
           '"count_unit":"item"|"base","evidence":str,"ambiguity":str}]}. '
-          'count_unit "item" means physical items (tubs, boxes, single strips); "base" means the count is already in ml. '
+          'Prefer count_unit "base": the TOTAL in the catalog base unit. For ml products: full items x item size, '
+          'plus open items x the stated % left x item size (1 full + 1 open at 20% of 100 ml = 120). '
+          'For unit products: individual pieces (4 boxes of 100 = 400). '
+          'Use count_unit "item" only for a plain item count with no conversion info. '
           'Use sku only from the catalog; null if unsure. If a count is unreadable, count=null and explain in ambiguity. '
           'Never guess a number you cannot see or read.')
 
@@ -55,7 +58,11 @@ def match_sku(label: str, products: dict[str, ProductSpec]) -> Optional[str]:
     return None
 
 
-def to_rows(obs: list[Observation], products: dict[str, ProductSpec], source: str) -> list[dict]:
+MAX_PLAUSIBLE = {"ml": 3000, "unit": 2000, "units": 2000}  # a barbershop shelf; above this needs a human look
+
+
+def to_rows(obs: list[Observation], products: dict[str, ProductSpec], source: str,
+            auto_confirm: bool = True) -> list[dict]:
     """Validate observations in code and convert to base-unit review rows."""
     rows = []
     for o in obs:
@@ -68,6 +75,9 @@ def to_rows(obs: list[Observation], products: dict[str, ProductSpec], source: st
                 qty, notes = None, notes + ["negative count rejected"]
             elif o.count_unit == "item" and spec.unit == "ml":
                 qty = qty * spec.item_size
+            if qty is not None and qty > MAX_PLAUSIBLE.get(spec.unit, 5000):
+                notes.append(f"implausible count {qty:g} - check it")
+                o = o.model_copy(update={"ambiguity": o.ambiguity or "implausible count"})
         if o.sku and o.sku not in products:
             notes.append(f"model SKU '{o.sku}' not in catalog")
         if not sku:
@@ -76,7 +86,7 @@ def to_rows(obs: list[Observation], products: dict[str, ProductSpec], source: st
             notes.append("count unknown - enter it")
         if o.ambiguity:
             notes.append(o.ambiguity)
-        rows.append({"confirm": bool(sku and qty is not None and not o.ambiguity), "raw label": o.raw_label,
+        rows.append({"confirm": auto_confirm and bool(sku and qty is not None and not o.ambiguity), "raw label": o.raw_label,
                      "sku": sku or "?", "quantity": qty, "unit": spec.unit if spec else "?",
                      "note": "; ".join(notes)})
     return rows
@@ -134,7 +144,9 @@ def extract_photo(img, products: dict[str, ProductSpec] = PRODUCTS) -> list[dict
         prompt = (f"This is a barbershop stocktake photo (shelf or count sheet). Read visible product labels and counts.\n"
                   f"Catalog:\n{_catalog(products)}\n{SCHEMA}")
         try:
-            return to_rows(_parse_items(llm.vision_json(prompt, data, mime)), products, f"Nebius VLM {llm.vision_model()}")
+            # VLM rows are never pre-ticked: the merchant confirms each count read from a photo.
+            return to_rows(_parse_items(llm.vision_json(prompt, data, mime)), products,
+                           f"Nebius VLM {llm.vision_model()} - tick to confirm", auto_confirm=False)
         except Exception as e:  # noqa: BLE001
             return to_rows(REPLAY, products, f"REPLAY staged photo ({type(e).__name__})")
     return to_rows(REPLAY, products, "REPLAY staged photo (no Nebius vision model)")
