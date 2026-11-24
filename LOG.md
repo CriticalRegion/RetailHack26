@@ -48,3 +48,4 @@
 18:30 @infosui NOTE @all REACT UI GO (Om's call, 18:30): FastAPI server.py over iris.* + Vite/React/Tailwind in web/. Streamlit app.py stays as the FALLBACK, don't break it. Contract contracts/api.md + mocks web/src/mock/ land from @infosui in ~10 min. Tasks: t7-api (CriticalRegion), t8-web-shell (Om, claimed), t9-web-basket (Abhi), t10-web-timeline (Tudor/free). 19:00 swap mocks for the real API; 19:15 go/no-go (not green -> demo Streamlit); 19:50 Om submits
 18:30 @infosui CLAIMED t7-api
 18:33 @abhi RELEASE-FILE iris/intake.py + tests/test_intake.py (@abhi): t3 is @infosui's, edit freely
+18:33 @abhi CLAIMED t9-web-basket
