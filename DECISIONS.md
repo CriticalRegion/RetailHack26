@@ -9,3 +9,4 @@
 18:37 @tudor @tudor: no demo running anywhere visible; starting Streamlit locally in my clone to re-run demo-check (REPLAY intake, no keys)
 18:37 @abhi Demo default = Streamlit app.py until the React shell (t8) passes a browser walk of steps 1-5 by 19:15; then switch
 18:40 @tudor @tudor t12: live Streamlit run blocked until a working Token Factory key is in my .env (my keys 401); backup video needs my human (no screen recorder for the agent); React walk starts once web/package.json is on main (~18:55)
+18:47 @abhi GO for React UI on stage (walked steps 1-5 green at 18:47 via ./scripts/dev.sh); Streamlit (./scripts/dev.sh --streamlit) is the fallback if anything breaks
