@@ -33,7 +33,7 @@ export function Basket({
 
   if (!proposal) {
     return (
-      <section className="rounded-lg border border-dashed border-zinc-200 bg-white p-8 text-center" data-testid="basket-empty">
+      <section className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center" data-testid="basket-empty">
         <p className="text-sm text-zinc-600">
           {kpis.bookings_at_risk > 0
             ? `${kpis.bookings_at_risk} bookings at risk. Let Iris find suppliers that deliver in time.`
@@ -44,7 +44,7 @@ export function Basket({
             type="button"
             onClick={onRun}
             disabled={busy}
-            className="mt-4 h-9 rounded-md bg-zinc-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-zinc-800 disabled:opacity-40"
+            className="mt-4 h-9 rounded-full bg-zinc-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-zinc-800 disabled:opacity-40"
             data-testid="run"
           >
             Run Iris: find suppliers
@@ -78,7 +78,7 @@ export function Basket({
       </header>
 
       {proposal.revision > 1 && (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-4 text-sm" data-testid="revision-diff">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4 text-sm" data-testid="revision-diff">
           <div className="flex items-center gap-2 font-medium text-zinc-900"><span className="h-1.5 w-1.5 rounded-full bg-zinc-900" />
             r{proposal.revision - 1} rejected → r{proposal.revision}
           </div>
@@ -111,8 +111,8 @@ export function Basket({
               )}
             </h3>
             {b.status === "unmet" || !sel ? (
-              <div className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-700 shadow-xs" data-testid="unmet">
-                <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-700 ring-red-600/10">No on-time offer left</span>
+              <div className="rounded-[28px] border border-white bg-white p-4 text-sm text-zinc-700 shadow-xs" data-testid="unmet">
+                <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-700 ring-red-600/10">No on-time offer left</span>
                 <p className="mt-1">{b.reason}</p>
               </div>
             ) : (
@@ -150,12 +150,12 @@ export function Basket({
       )}
 
       {open && (
-        <div className="grid gap-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-xs md:grid-cols-2">
+        <div className="grid gap-3 rounded-[28px] border border-white bg-white p-4 shadow-xs md:grid-cols-2">
           <button
             type="button"
             onClick={() => onApprove(proposal.revision)}
             disabled={busy || !orderable}
-            className="h-10 rounded-md bg-emerald-600 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-10 rounded-full bg-emerald-600 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
             data-testid="approve"
           >
             Approve r{proposal.revision} · {gbp(proposal.total)}
@@ -173,12 +173,12 @@ export function Basket({
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Why? e.g. not BarberHub, they were late last time"
               aria-label="Reject with feedback"
-              className="h-10 min-w-0 flex-1 rounded-md border border-zinc-200 bg-white px-3 text-sm shadow-xs placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+              className="h-10 min-w-0 flex-1 rounded-full border border-zinc-200 bg-white px-3 text-sm shadow-xs placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
             />
             <button
               type="submit"
               disabled={busy}
-              className="h-10 rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-40"
+              className="h-10 rounded-full border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-40"
               data-testid="reject"
             >
               Reject &amp; search again

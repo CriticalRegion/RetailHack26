@@ -15,7 +15,7 @@ export function OrderConfirm({
   busy?: boolean;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-card" data-testid="order-confirm">
+    <section className="rounded-[28px] border border-white bg-white p-5 shadow-card" data-testid="order-confirm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-500"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Simulated order placed</div>
@@ -43,7 +43,7 @@ export function OrderConfirm({
       </ul>
 
       {kpis.bookings_protected > 0 && (
-        <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20">
+        <p className="mt-4 rounded-full bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20">
           {kpis.bookings_protected} bookings protected · {gbp(kpis.revenue_covered)} booking revenue covered
           <span className="block text-xs font-normal text-zinc-500">estimate, separate from the supplier price</span>
         </p>
@@ -56,7 +56,7 @@ export function OrderConfirm({
             onClick={onApproveAgain}
             disabled={busy}
             data-testid="approve-again"
-            className="rounded-md border border-zinc-200 bg-white px-3 h-8 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-40"
+            className="rounded-full border border-zinc-200 bg-white px-3 h-8 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-40"
           >
             Approve r{order.revision} again (duplicate test)
           </button>
@@ -66,7 +66,7 @@ export function OrderConfirm({
             type="button"
             onClick={() => onReceived(order.order_id)}
             disabled={busy}
-            className="rounded-md border border-zinc-200 bg-white px-3 h-8 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-40"
+            className="rounded-full border border-zinc-200 bg-white px-3 h-8 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-40"
           >
             Mark received
           </button>

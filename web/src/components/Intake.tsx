@@ -5,11 +5,11 @@ import { samplePhotoUrl, type ReviewRow, type State } from "../api";
 
 function Badge({ model, kind }: { model: string | null; kind: "photo" | "text" }) {
   return model ? (
-    <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-700 ring-emerald-600/20" title={model}>
+    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-700 ring-emerald-600/20" title={model}>
       LIVE · {model.split("/").pop()}
     </span>
   ) : (
-    <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-600/20">
+    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-600/20">
       {kind === "photo" ? "REPLAY" : "RULES"} · labelled fallback
     </span>
   );
@@ -36,7 +36,7 @@ export function Intake({ state, busy, onSample, onPhoto, onText, onConfirm, onCl
   const ticked = rows.filter((r) => r.confirm && r.sku !== "?" && r.quantity != null).length;
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-xs" aria-labelledby="intake-h">
+    <section className="rounded-[28px] border border-white bg-white p-5 shadow-xs" aria-labelledby="intake-h">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="intake-h" className="text-base font-semibold tracking-tight text-zinc-900">1 · Stock count</h2>
         <div className="flex gap-2">
@@ -47,7 +47,7 @@ export function Intake({ state, busy, onSample, onPhoto, onText, onConfirm, onCl
 
       <div className="mt-3 grid gap-4 md:grid-cols-[1fr_1.3fr]">
         <div>
-          <div className="mb-3 inline-flex rounded-md bg-zinc-100 p-0.5 text-sm" role="tablist">
+          <div className="mb-3 inline-flex rounded-full bg-zinc-100 p-0.5 text-sm" role="tablist">
             {(["photo", "text"] as const).map((t) => (
               <button
                 key={t}
@@ -62,15 +62,15 @@ export function Intake({ state, busy, onSample, onPhoto, onText, onConfirm, onCl
           </div>
           {tab === "photo" ? (
             <div className="space-y-3">
-              {thumb && <img src={thumb} alt="Staged stocktake sheet" className="max-h-40 rounded-lg border border-zinc-200 object-contain" />}
+              {thumb && <img src={thumb} alt="Staged stocktake sheet" className="max-h-40 rounded-2xl border border-zinc-200 object-contain" />}
               <div className="flex flex-wrap gap-2">
-                <button disabled={busy} onClick={() => onSample(false)} className="h-9 rounded-md bg-zinc-900 px-3.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40">
+                <button disabled={busy} onClick={() => onSample(false)} className="h-9 rounded-full bg-zinc-900 px-3.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40">
                   Use sample photo
                 </button>
-                <button disabled={busy} onClick={() => onSample(true)} className="h-9 rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40">
+                <button disabled={busy} onClick={() => onSample(true)} className="h-9 rounded-full border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40">
                   Blurry photo
                 </button>
-                <label className="inline-flex h-9 cursor-pointer items-center rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50">
+                <label className="inline-flex h-9 cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50">
                   Upload…
                   <input type="file" accept="image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && onPhoto(e.target.files[0])} />
                 </label>
@@ -78,8 +78,8 @@ export function Intake({ state, busy, onSample, onPhoto, onText, onConfirm, onCl
             </div>
           ) : (
             <div className="space-y-2">
-              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10" aria-label="Stock notes" />
-              <button disabled={busy || !text.trim()} onClick={() => onText(text)} className="h-9 rounded-md bg-zinc-900 px-3.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40">
+              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} className="w-full rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10" aria-label="Stock notes" />
+              <button disabled={busy || !text.trim()} onClick={() => onText(text)} className="h-9 rounded-full bg-zinc-900 px-3.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40">
                 Read text
               </button>
             </div>
@@ -100,7 +100,7 @@ export function Intake({ state, busy, onSample, onPhoto, onText, onConfirm, onCl
 
         <div>
           {rows.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-zinc-200 p-6 text-center text-sm text-zinc-500">
+            <p className="rounded-2xl border border-dashed border-zinc-200 p-6 text-center text-sm text-zinc-500">
               Read a photo or pasted text. Nothing changes until you confirm the rows.
             </p>
           ) : (
@@ -117,12 +117,12 @@ export function Intake({ state, busy, onSample, onPhoto, onText, onConfirm, onCl
                         <td className="py-1.5"><input type="checkbox" checked={r.confirm} onChange={(e) => edit(i, { confirm: e.target.checked })} aria-label={`Confirm ${r.raw_label}`} /></td>
                         <td className="py-1.5 pr-2">{r.raw_label}</td>
                         <td className="py-1.5 pr-2">
-                          <select value={r.sku} onChange={(e) => edit(i, { sku: e.target.value })} className="h-7 rounded-md border border-zinc-200 bg-white px-1.5 text-xs shadow-xs focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+                          <select value={r.sku} onChange={(e) => edit(i, { sku: e.target.value })} className="h-7 rounded-full border border-zinc-200 bg-white px-1.5 text-xs shadow-xs focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
                             {[...skus, "?"].map((s) => <option key={s} value={s}>{s === "?" ? "? unmatched" : state.products.find((p) => p.sku === s)?.name ?? s}</option>)}
                           </select>
                         </td>
                         <td className="py-1.5 text-right">
-                          <input type="number" value={r.quantity ?? ""} onChange={(e) => edit(i, { quantity: e.target.value === "" ? null : Number(e.target.value) })} className="h-7 w-20 rounded-md border border-zinc-200 bg-white px-1.5 text-right text-sm tabular-nums shadow-xs focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10" aria-label={`Quantity for ${r.raw_label}`} />
+                          <input type="number" value={r.quantity ?? ""} onChange={(e) => edit(i, { quantity: e.target.value === "" ? null : Number(e.target.value) })} className="h-7 w-20 rounded-full border border-zinc-200 bg-white px-1.5 text-right text-sm tabular-nums shadow-xs focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10" aria-label={`Quantity for ${r.raw_label}`} />
                           <span className="ml-1 text-xs text-zinc-500">{r.unit}</span>
                         </td>
                         <td className="py-1.5 pl-2 text-xs text-amber-700">{r.note}</td>
@@ -132,10 +132,10 @@ export function Intake({ state, busy, onSample, onPhoto, onText, onConfirm, onCl
                 </table>
               </div>
               <div className="mt-3 flex gap-2">
-                <button disabled={busy || ticked === 0} onClick={() => onConfirm(rows.map(({ sku, quantity, confirm }) => ({ sku, quantity, confirm })))} className="h-9 rounded-md bg-zinc-900 px-3.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40">
+                <button disabled={busy || ticked === 0} onClick={() => onConfirm(rows.map(({ sku, quantity, confirm }) => ({ sku, quantity, confirm })))} className="h-9 rounded-full bg-zinc-900 px-3.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40">
                   Confirm {ticked} {ticked === 1 ? "count" : "counts"}
                 </button>
-                <button disabled={busy} onClick={onClear} className="h-9 rounded-md px-3.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40">Discard</button>
+                <button disabled={busy} onClick={onClear} className="h-9 rounded-full px-3.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40">Discard</button>
               </div>
             </>
           )}

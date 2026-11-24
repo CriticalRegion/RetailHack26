@@ -79,14 +79,14 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
       : "Enough stock for the next 7 days";
 
   return (
-    <figure className="w-full rounded-lg border border-zinc-200 bg-white p-5 shadow-xs">
+    <figure className="w-full rounded-[28px] border border-white bg-white p-5 shadow-xs">
       <figcaption className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-sm font-semibold text-zinc-900">{line.name}</span>
         <span
           className={
             line.first_at_risk
-              ? "inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10"
-              : "inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+              ? "inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10"
+              : "inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
           }
         >
           {status}
@@ -95,7 +95,7 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
       <div style={{ height }} aria-label={`${line.name} projected stock over the next 7 days. ${status}`} role="img">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart margin={{ top: 16, right: 16, bottom: 4, left: 4 }}>
-            <CartesianGrid stroke="#f4f4f5" vertical={false} />
+            <CartesianGrid stroke="#efeee9" vertical={false} />
             <XAxis
               dataKey="t"
               type="number"
@@ -142,7 +142,7 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
               dataKey="v"
               name={orderLands ? "With the order" : "Projected stock"}
               type="stepAfter"
-              stroke={orderLands ? "#10b981" : "#18181b"}
+              stroke={orderLands ? "#8b7cf6" : "#18181b"}
               strokeWidth={1.5}
               dot={false}
               isAnimationActive={false}
@@ -150,9 +150,9 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
             {orderLands && (
               <ReferenceLine
                 x={orderLands}
-                stroke="#10b981"
+                stroke="#8b7cf6"
                 strokeDasharray="2 3"
-                label={{ value: `order lands ${when(orderLands)}`, position: "insideBottomRight", fill: "#059669", fontSize: 11, fontWeight: 600 }}
+                label={{ value: `order lands ${when(orderLands)}`, position: "insideBottomRight", fill: "#6d5dd3", fontSize: 11, fontWeight: 600 }}
               />
             )}
             {markerT !== null && marker && (

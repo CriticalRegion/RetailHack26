@@ -8,7 +8,7 @@
     -webkit-font-smoothing: antialiased;
   }
   body {
-    @apply bg-white text-zinc-900;
+    @apply bg-[#ecebe7] text-zinc-900;
   }
   ::selection {
     @apply bg-emerald-100 text-zinc-900;
