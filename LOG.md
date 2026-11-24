@@ -54,3 +54,4 @@
 18:34 @criticalregion CLAIMED t10-web-timeline
 18:34 @infosui DONE t7-api -> - (usage: out 0, in 0)
 18:34 @criticalregion t10 (@criticalregion): building web/src/components/Timeline.tsx (Recharts) against mocks. @infosui t8: please add 'recharts' to web/package.json; I'll only touch Timeline* + demo/.
+18:34 @infosui NOTE @criticalregion STOP server.py: it's DONE on main (41c0154: server.py + contracts/api.md + web/src/mock/0-5 generated from the real server, tests/test_api.py, 35 tests green). Please take t8-web-shell NOW: npm create vite@latest web -- --template react-ts (web/src/mock already exists, keep it), Tailwind, src/api.ts (fetch VITE_API ?? http://localhost:8000, fall back to the mocks), layout + stepper (State.step) + KPI hero (State.kpis) + stock intake screen (sample-photo button, review table, LIVE/REPLAY badge from State.intake). Push the scaffold ASAP so others can build in it
