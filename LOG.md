@@ -107,3 +107,4 @@
 18:50 @tudor DONE t12-live-qa -> demo/backup-streamlit.webm (usage: out 16k, in 9.5M)
 18:50 @tudor STUCK (autonomous): no progress after 3 tries on: All tasks are done but the demo hasn't been checked since: run /demo-check.
 18:53 @abhi CLAIMED t15-ui-restyle
+18:53 @abhi CLAIM-FILE web/src/** + web/tailwind.config.js + web/index.html (@abhi t15 visual restyle on a branch, merge only after browser walk, by 19:20). @criticalregion please avoid style edits in web/ until then; logic fixes fine, tell me
