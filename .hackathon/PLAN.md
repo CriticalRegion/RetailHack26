@@ -9,13 +9,20 @@
 - Team (handle: skills, usage-window start): @abhi: CS, Python/JS, window started ~17:00. Teammates: unknown
 - Links (Devpost, Discord, docs): https://luma.com/1ri4tr1c ; https://builderbase.com/event/innovators-guild-hackathon
 ## Plan
-- One-line pitch: undecided. Choosing between 4 candidate ideas in IDEAS.md
+- One-line pitch: Iris, "Never run out of what's booked": turns next week's appointments and a stock count (photo or text) into a justified supplier basket the owner approves, rejects with feedback, or orders (simulated). Barbershop demo, generic schema. Full spec: IRIS.md (Idea A in IDEAS.md)
+- Submission: BuilderBase (https://builderbase.com/event/innovators-guild-hackathon), team deadline 20:00 London time (24 Nov 2026). Demo slot sign-up with the facilitator before 20:20
 - Demo path (3-5 steps a judge will see):
-- Stack:
-- Scaffold command (official starter/generator):
-- Mocked, not integrated (FAKE:):
-- Owners (directory -> @name):
-- Dev command / local URL:
-- Live URL:
-- Milestones (clock time): [ ] M1 deployed skeleton  [ ] M2 vertical slice  [ ] M3 polish  [ ] M4 demo recorded
+  1. Upload staged stock photo, confirm detected clay count (text intake shown briefly), change a count and watch the forecast move
+  2. Run Iris: first at-risk appointment and responsible services, supplier offers with price/delivery evidence, why the cheaper seller misses Friday
+  3. Reject the proposed supplier with feedback: revised basket, still no order
+  4. Approve the revised basket: one simulated order, new incoming stock, updated coverage; retry approval = still one order
+  5. (If time) tattoo preset or "Why so much clay?"
+- Stack: Python + Streamlit, small modules (iris/*), Nebius Token Factory via OpenAI-compatible client (Nemotron text, image-capable VLM), Tavily search, JSON synthetic data. Runs locally
+- Scaffold command (official starter/generator): none (single `app.py` + `iris/` package per IRIS.md); `pip install streamlit openai tavily-python python-dotenv pydantic`
+- Mocked, not integrated (FAKE:): supplier offers (labelled fixture, 2 on-time + 1 cheaper late for the hero SKU), live extraction replay if endpoint fails, orders and payments (simulated local order only), Fresha bookings (synthetic), supplier emails
+- Owners (directory -> @name): data/ + iris/calc.py + iris/data.py -> Tudor (tizzy1); iris/llm.py + iris/intake.py -> Om (@infosui, Infosuii); iris/sourcing.py + iris/agent.py -> CriticalRegion; app.py + iris/orders.py + demo/BuilderBase materials -> Abhi (@abhi, abhit-7). Confirm in team chat
+- Dev command / local URL: `streamlit run app.py` / http://localhost:8501
+- Live URL: none (local demo)
+- Milestones (clock time, London): [ ] 18:00 schemas agreed, clay shortage + 2 offers seeded, Nebius text/image + Tavily + blueprint seam smoke-tested  [ ] 18:45 end-to-end: stock -> forecast -> basket -> reject -> simulated order  [ ] 19:15 real photo/text extraction + one live supplier lookup, fixture run ready  [ ] 19:35 acceptance checks, polish, backup recording  [ ] 19:50 BuilderBase entry prepared, submit before 20:00
 ## Cut list (not building)
+Ask Iris chat, extra presets (tattoo only if time), supplier emails, history/trend polish, 14-day view. Out of scope: real Fresha integration, live ordering, real payments, accounts, mobile, deploying the full NVIDIA blueprint stacks

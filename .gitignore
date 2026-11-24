@@ -31,6 +31,11 @@ CLAUDE.local.md
 .playwright-mcp/
 # secrets and build output
 .env
+.venv/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+data/demo_state.json
 .env.local
 .env.*.local
 .env.production

@@ -1,10 +1,11 @@
 # Ideas (from /hackathon:kickoff; /hackathon:pivot reads the runners-up)
 
-Status: 4 candidates, NO decision yet. Do not pick one or start building until the team chooses.
+Status: **CHOSEN: Idea A, built as Iris** (a generic buying assistant for booking businesses, with a barbershop demo). Full spec: [IRIS.md](../IRIS.md). Ideas B, C and D are runners-up for `/hackathon:pivot`; their texts are kept below.
 
 Likely stack for any of them: Python + Streamlit, Nebius Token Factory via the OpenAI SDK, Tavily, JSON synthetic data.
 
-## IDEA A: Stock manager for salons/barbers (working name Backbar; needs a new name)
+## IDEA A (CHOSEN, now **Iris**, see [IRIS.md](../IRIS.md)): Stock manager for salons/barbers (working name Backbar; needs a new name)
+Scope as built: a generic engine for booking businesses, with one full barbershop demo (matte clay shortage). Adds photo/text stock intake (VLM/LLM), typed supplier search (NVIDIA Retail Shopping Assistant pattern + Tavily), reject-with-feedback loop and a simulated order. Original pitch:
 Reads the next 14 days of Fresha bookings + notes, predicts which products run out, and gives the owner a justified shopping list to approve. Insight: salons know demand in advance, and each service has a product recipe. Code does the maths (recipe x bookings - stock = shortfall and run-out date). AI interprets notes ("very long hair" = 1.5x colour), spots trends ("textured crops +60%"), picks suppliers (price/rating/arrives in time) and writes one-line reasons. Owner approves, then mock orders + drafted supplier emails. Stretch: "Ask me" chat, Tavily supplier search, cost per service, shrinkage alert. Screens: run-out timeline, shopping list with Approve/Edit/Remove, confirmation with £ saved and services protected.
 
 ## IDEA B: Agent-to-agent booking
