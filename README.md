@@ -8,6 +8,17 @@ Built at the Retail AI & Agents Hackathon (Innovators Guild at Fresha, London, 2
 
 ## Run it
 
+### Run the React UI
+
+```bash
+./scripts/dev.sh                                              # macOS / Linux
+powershell -ExecutionPolicy Bypass -File scripts/dev.ps1      # Windows
+```
+
+One command starts the FastAPI server (`server.py`, http://localhost:8000) and the React app (http://localhost:5173), creating `.venv` and installing `web/` dependencies on first run. Stopping the web server stops the API. Pass `--streamlit` (Windows: `-Streamlit`) to run the Streamlit fallback instead on http://localhost:8501. Ports can be overridden with `API_PORT`, `WEB_PORT`, `ST_PORT`.
+
+### Setup and Streamlit
+
 ```bash
 python3.14 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env            # optional: Nebius + Tavily keys; without them Iris uses labelled fallbacks
@@ -41,7 +52,9 @@ flowchart LR
 
 | Module | What it does |
 |---|---|
-| `app.py` | Streamlit flow; forecast and synthetic bookings (until `iris/calc.py` lands) |
+| `server.py` | FastAPI JSON API over `iris.*` (view-model State); contract in `contracts/api.md` |
+| `web/` | React UI (Vite + React + Tailwind, Recharts run-out chart) that calls `server.py` |
+| `app.py` | Streamlit fallback flow; forecast and synthetic bookings (until `iris/calc.py` lands) |
 | `iris/intake.py`, `iris/llm.py` | Explicit router (photo → VLM, text → LLM), shared extraction schema, validation and SKU matching in code. Nothing changes stock until the owner confirms |
 | `iris/sourcing.py` | Typed read-only `search_suppliers` tool; fixture and Tavily adapters; hard filters (brand, variant, size, evidence) and deterministic ranking in code |
 | `iris/agent.py` | Builds search requests, turns ranked results into proposals, reruns with exclusions and feedback constraints on rejection. Cannot place orders |
@@ -54,7 +67,7 @@ Every number (demand, shortage, packs, cost, ETA vs need-by) is computed in code
 | Component | Status |
 |---|---|
 | Bookings, recipes, stock | **Synthetic** barbershop fixture (no real customer data) |
-| Photo / text stock intake | **Live** Nebius Token Factory VLM / LLM when `NEBIUS_API_KEY` + `IRIS_*_MODEL` are set; otherwise a **labelled** replay / rule parser (the UI says which ran) |
+| Photo / text stock intake | **Live** via Nebius Token Factory: text `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`, vision `google/gemma-3-27b-it`, set by `IRIS_TEXT_MODEL` / `IRIS_VISION_MODEL` in `.env` (plus `NEBIUS_API_KEY`). Without them a **labelled** replay / rule parser runs (the UI says which ran) |
 | Supplier offers | **Labelled fixture** by default (repeatable demo); sidebar toggle enables **live Tavily** discovery. Live listings without readable price, pack size or delivery stay leads |
 | Orders, payments | **Simulated** local order only. No real purchasing |
 
