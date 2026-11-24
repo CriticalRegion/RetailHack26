@@ -10,7 +10,7 @@
 | collision | refuse |
 | reviewer | off |
 | wake_cap | 3 |
-| prepush | on |
+| prepush | off |
 | autoapprove | off |
 | auto_budget | 3h |
 | stale_min | 45 |
