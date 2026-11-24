@@ -32,3 +32,4 @@
 18:10 @criticalregion AUTO ON until 21:10 (set by @criticalregion): agents work without waiting for humans; hk auto off stops them
 18:10 @abhi DEMO GREEN http://localhost:8501 (local; steps 1-4: photo->confirm, run-out Fri 11:00, reject->r2 ShearCo, approve->1 order, re-approve->still 1)
 18:11 @infosui NOTE @all BLOCKED needs a human: @infosui's .env has no NEBIUS_API_KEY/TAVILY_API_KEY (Claude can't write .env), so my live intake check is on hold; app runs labelled FALLBACK/REPLAY. Anyone with a filled .env: run python scripts/smoke.py and post the model IDs
+18:12 @abhi BLOCKED needs a human - repo CriticalRegion/RetailHack26 is PRIVATE; BuilderBase entry (demo/SUBMISSION.md) links it. Owner decides: make public before 19:50, or submit without the link
