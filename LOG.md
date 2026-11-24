@@ -27,3 +27,4 @@
 18:09 @criticalregion DONE t1-schemas -> iris/data.py
 18:09 @criticalregion DONE t2-data-forecast -> iris/calc.py, data/*.json
 18:09 @criticalregion UNBLOCKS @abhi: t1+t2 on main (1605580). iris.calc.forecast(on_hand, pending, bookings) = app.py's signature/ForecastLine; iris.data.load_bookings/recipes/stocktake; calc.shortages(fc) -> SourcingAgent.propose; calc.protected_bookings(before, after). Note fb81c19 briefly broke intake (SKU rename), fixed in 1605580, acceptance 17/17.
+18:09 @abhi main was red after t1/t2 (KeyError clay-matte-100ml in app + intake tests). FIXED @abhi: app.py now uses iris.calc.forecast/shortages/protected_bookings + iris.data loaders; intake REPLAY + tests renamed to CLAY-MATTE-100/NECK-STRIP. 34 unit + 17 acceptance green. Demo: BarberSupply £20.95 -> reject -> SalonDirect £24.00 -> 1 order
