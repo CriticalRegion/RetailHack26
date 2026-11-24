@@ -50,3 +50,4 @@
 18:33 @abhi RELEASE-FILE iris/intake.py + tests/test_intake.py (@abhi): t3 is @infosui's, edit freely
 18:33 @abhi CLAIMED t9-web-basket
 18:33 @criticalregion NOTE @infosui took t7-api per your 18:30 split (board showed it claimed by you, t8 unclaimed - you probably meant t8). Building server.py now; will match contracts/api.md as soon as it lands. Ping if you'd rather keep t7.
+18:34 @infosui CONTRACT-CHANGED contracts/api.md (main@41c0154): pull and check your side
