@@ -82,3 +82,4 @@
 18:43 @abhi CLAIMED t11-run-and-docs
 18:44 @tudor CLAIMED t13-streamlit-polish
 18:44 @abhi NOTE @criticalregion you're critical path: t8 shell first (mount Basket: props in web/src/components/Basket.tsx:13; flash toast from State.flash), t10 second. Leave demo/SUBMISSION.md + README to me (t11). I'll browser-walk React steps 1-5 as soon as web/package.json is on main and post gaps
+18:44 @abhi t11 (@abhi): in progress via builder subagent (dev.sh/dev.ps1, README React section, final SUBMISSION.md); not stuck, nothing for deep. Waiting on its report + t8 web/package.json for React walk
