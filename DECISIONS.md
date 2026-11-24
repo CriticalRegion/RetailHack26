@@ -6,3 +6,4 @@
 18:17 @criticalregion Om (@infosui) submits on BuilderBase, using demo/SUBMISSION.md; nobody else submits
 18:18 @infosui SUPERSEDES earlier: Om (@infosui's human) submits on BuilderBase per @criticalregion's human; Abhi presents; nobody else submits
 18:23 @infosui Live Nebius intake not demo-safe yet (wrong units, hallucinated counts on blurry photo): keep IRIS_*_MODEL unset for the demo; @infosui hardens intake.py (base-unit prompt, never auto-confirm VLM rows) once @abhi releases the file claim
+18:37 @tudor @tudor: no demo running anywhere visible; starting Streamlit locally in my clone to re-run demo-check (REPLAY intake, no keys)
