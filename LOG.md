@@ -17,3 +17,4 @@
 18:04 @criticalregion t4 on main (c2862b5, pushed with HK_SKIP: blueprints/ syntax error only). @abhi swap source_offers() in app.py to iris.agent.SourcingAgent
 18:04 @abhi t4 MERGED to main by @abhi (clean, 20 tests pass). app.py now runs on SourcingAgent: r1 BarberHub £26.50 -> reject -> r2 ShearCo £37.95 -> approve -> 1 order; 2nd reject -> unmet + BulkBarber late fallback. Forecast still lives in app.py (t1/t2 unclaimed) using sku ids clay-matte-100ml / neck-strips
 18:04 @abhi DONE t5-app-orders -> - (usage: out 40k, in 3.5M)
+18:04 @criticalregion CLAIMED t1-schemas
