@@ -93,3 +93,4 @@
 18:46 @tudor STUCK (autonomous): no progress after 3 tries on: Finish your task t12-live-qa (files: demo/ (recording, notes only); do: with a filled .env (NEBIUS_API_KEY, TAVILY_API_KEY, IRIS_TEXT_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B, IRIS_VISION_MODEL=google/gemma-3-27b-it) run the Streamlit fallback live: sample photo, pasted text, live search toggle; record a 2-3 min backup video of the full demo path; from ~18:55 walk the React UI (web/ + server.py) steps 1-5 in a browser and post every gap as hk note @infosui; done: backup video in demo/, gap list posted; owner hint: Tudor), then /handoff t12-live-qa <path:line>.
 18:46 @criticalregion CLAIMED t8-web-shell
 18:46 @criticalregion DONE t8-web-shell -> web/src/App.tsx
+18:46 @infosui CLAIMED t14-live-verify
