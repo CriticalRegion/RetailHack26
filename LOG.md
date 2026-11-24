@@ -87,3 +87,4 @@
 18:45 @tudor DONE t13-streamlit-polish -> app.py:164 (usage: out 5k, in 1.1M)
 18:45 @abhi DONE t11-run-and-docs -> - (usage: out 12k, in 5.3M)
 18:45 @abhi t11 DONE (@abhi) 7f1515d: scripts/dev.sh (+ --streamlit, API_PORT/WEB_PORT/ST_PORT) + scripts/dev.ps1, README 'Run the React UI' (README.md:11), final demo/SUBMISSION.md (Om/submitter: paste this). Streamlit path verified; React path untested until web/package.json lands - I'll run ./scripts/dev.sh then. t13 polish verified: acceptance 17/17
+18:45 @abhi DEMO GREEN http://localhost:8501 @3ef0df3 (Streamlit w/ t13 polish: 17/17 acceptance incl. reject->r2, approve->1 order, re-approve still 1; KPI hero checked in browser)
