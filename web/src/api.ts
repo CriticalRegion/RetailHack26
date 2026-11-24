@@ -93,6 +93,7 @@ function fromMock(path: string): State {
 // ------------------------------------------------------------------ transport
 export type Mode = "api" | "mock";
 let mode: Mode = "api";
+let live = false; // true after the first successful API response
 export const getMode = () => mode;
 
 async function call(path: string, init?: RequestInit): Promise<State> {
@@ -101,9 +102,13 @@ async function call(path: string, init?: RequestInit): Promise<State> {
   try {
     res = await fetch(`${API}${path}`, init);
   } catch {
-    mode = "mock"; // server not running: demo on the recorded mocks
+    // Server not running at first load: demo on the recorded mocks. Once live, never switch silently:
+    // a dropped request mid-demo must show an error, not a recorded "order placed".
+    if (live) throw new ApiError("API not reachable - is the server still running? (nothing was changed)");
+    mode = "mock";
     return fromMock(path);
   }
+  live = true;
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
     try {
