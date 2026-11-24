@@ -22,7 +22,7 @@ export function Runout({ line, orderEta, height = 300, compact = false }: { line
   const t1 = Math.max(...all.map((p) => p.t));
   const riskT = (hasOrder ? null : line.first_at_risk) ?? null;
   const wasRisk = hasOrder ? line.first_at_risk ?? null : null;
-  const color = hasOrder || line.uncovered === 0 ? "#059669" : "#1c1917";
+  const color = hasOrder || line.uncovered === 0 ? "#059669" : "#1f3b2f";
   const gid = `g-${line.sku}`;
   const ticks: number[] = [];
   for (let d = new Date(t0); d.getTime() <= t1; d.setDate(d.getDate() + 1)) {
@@ -40,7 +40,7 @@ export function Runout({ line, orderEta, height = 300, compact = false }: { line
               <stop offset="100%" stopColor={color} stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#f0efed" vertical={false} />
+          <CartesianGrid stroke="#e1e8dc" vertical={false} />
           <XAxis
             type="number"
             dataKey="t"

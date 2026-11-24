@@ -47,12 +47,12 @@ export function Stock({
         title="Stock count"
         sub="Snap the shelf or paste a count. You confirm every number."
         right={
-          <div className="flex rounded-xl bg-stone-100 p-1 text-[13px] font-semibold">
+          <div className="flex rounded-xl bg-[#e3eadf] p-1 text-[13px] font-semibold">
             {(["photo", "text"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`rounded-lg px-3 py-1 transition-colors ${tab === t ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"}`}
+                className={`rounded-lg px-3 py-1 transition-colors ${tab === t ? "bg-[#f6f8f3] text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"}`}
               >
                 {t === "photo" ? "Photo" : "Pasted text"}
               </button>
@@ -69,10 +69,10 @@ export function Stock({
 
         {tab === "photo" ? (
           <div className="flex gap-4">
-            <div className="relative h-[104px] w-[150px] shrink-0 overflow-hidden rounded-xl bg-stone-100 ring-1 ring-black/5">
+            <div className="relative h-[104px] w-[150px] shrink-0 overflow-hidden rounded-xl bg-[#e3eadf] ring-1 ring-black/5">
               {thumb ? <img src={thumb} alt="Staged stocktake photo" className="h-full w-full object-cover object-left-top" /> : <div className="grid h-full place-items-center text-xs text-stone-400">photo</div>}
               {pending === "photo" && (
-                <div className="absolute inset-0 grid place-items-center bg-white/70 backdrop-blur-[1px]">
+                <div className="absolute inset-0 grid place-items-center bg-[#f6f8f3]/70 backdrop-blur-[1px]">
                   <Spinner className="h-5 w-5 text-stone-700" />
                 </div>
               )}
@@ -106,7 +106,7 @@ export function Stock({
               onChange={(e) => setText(e.target.value)}
               rows={3}
               aria-label="Stock notes"
-              className="w-full resize-none rounded-xl border-0 bg-stone-50 px-3.5 py-3 text-sm text-stone-800 ring-1 ring-inset ring-stone-200 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-300"
+              className="w-full resize-none rounded-xl border-0 bg-[#edf2e9] px-3.5 py-3 text-sm text-stone-800 ring-1 ring-inset ring-[#d3dccd] placeholder:text-stone-400 focus:bg-[#f6f8f3] focus:outline-none focus:ring-2 focus:ring-stone-300"
             />
             <Button variant="primary" disabled={busy || !text.trim()} onClick={() => onText(text)}>
               {pending === "text" ? <Spinner /> : null}
@@ -123,7 +123,7 @@ export function Stock({
       </div>
 
       {review.length > 0 && (
-        <div className="border-t border-stone-100 bg-stone-50/60 px-6 py-4">
+        <div className="border-t border-[#e1e8dc] bg-[#edf2e9]/60 px-6 py-4">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[13px] font-semibold text-stone-800">What Iris read <span className="font-normal text-stone-500">· {state.review_source}</span></p>
             <p className="text-[12px] text-stone-500">Tick the rows that are right</p>
@@ -133,14 +133,14 @@ export function Stock({
               const row = rows[i] ?? { confirm: false, sku: r.sku, quantity: r.quantity };
               const set = (p: Partial<Row>) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, ...p } : x)));
               return (
-                <div key={i} className={`rounded-lg bg-white p-3 ring-1 ${row.confirm ? "ring-stone-500" : "ring-stone-200"}`}>
+                <div key={i} className={`rounded-lg bg-[#f6f8f3] p-3 ring-1 ${row.confirm ? "ring-stone-500" : "ring-[#d3dccd]"}`}>
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       aria-label={`Confirm ${r.raw_label}`}
                       checked={row.confirm}
                       onChange={(e) => set({ confirm: e.target.checked })}
-                      className="h-4 w-4 shrink-0 rounded border-stone-300 accent-stone-900"
+                      className="h-4 w-4 shrink-0 rounded border-stone-300 accent-[#1f3b2f]"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-semibold text-stone-900">{r.raw_label}</div>
@@ -148,7 +148,7 @@ export function Stock({
                         value={row.sku}
                         onChange={(e) => set({ sku: e.target.value })}
                         aria-label={`Product for ${r.raw_label}`}
-                        className="mt-1 w-full truncate rounded-lg border-0 bg-stone-50 py-1 pl-2 pr-7 text-[12px] text-stone-700 ring-1 ring-inset ring-stone-200 focus:outline-none focus:ring-stone-300"
+                        className="mt-1 w-full truncate rounded-lg border-0 bg-[#edf2e9] py-1 pl-2 pr-7 text-[12px] text-stone-700 ring-1 ring-inset ring-[#d3dccd] focus:outline-none focus:ring-stone-300"
                       >
                         {state.products.map((p) => (
                           <option key={p.sku} value={p.sku}>{p.name}</option>
@@ -163,7 +163,7 @@ export function Stock({
                         value={row.quantity ?? ""}
                         placeholder="?"
                         onChange={(e) => set({ quantity: e.target.value === "" ? null : Number(e.target.value) })}
-                        className="w-20 rounded-lg border-0 bg-stone-50 px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-stone-900 ring-1 ring-inset ring-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-300"
+                        className="w-20 rounded-lg border-0 bg-[#edf2e9] px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-stone-900 ring-1 ring-inset ring-[#d3dccd] focus:outline-none focus:ring-2 focus:ring-stone-300"
                       />
                       <span className="w-8 text-[11px] text-stone-500">{r.unit}</span>
                     </div>
@@ -182,7 +182,7 @@ export function Stock({
         </div>
       )}
 
-      <div className="border-t border-stone-100 px-6 py-4">
+      <div className="border-t border-[#e1e8dc] px-6 py-4">
         <p className="mb-2 text-[12px] font-medium text-stone-500">On hand now</p>
         <ul className="space-y-2">
           {state.stock.map((s) => (

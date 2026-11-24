@@ -18,8 +18,8 @@ const STEPS = [
 
 function Logo() {
   return (
-    <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-stone-900">
-      <span className="h-3.5 w-3.5 rounded-full bg-white" />
+    <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-[#1f3b2f]">
+      <span className="h-3.5 w-3.5 rounded-full bg-[#f6f8f3]" />
       <span className="absolute h-1.5 w-1.5 rounded-full bg-stone-900" />
     </span>
   );
@@ -29,7 +29,7 @@ function Sidebar({ state, busy, mock, onLive, onReset }: { state: State; busy: b
   const cur = STEPS.findIndex((s) => s.id === state.step);
   const done = (i: number) => i < cur || (state.kpis.orders > 0 && i === 3);
   return (
-    <aside className="flex w-full flex-col border-r border-stone-200 bg-white text-stone-600 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[272px] lg:overflow-y-auto">
+    <aside className="flex w-full flex-col border-r border-[#c9d3c2] bg-[#dde6d7] text-stone-600 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[272px] lg:overflow-y-auto">
       <div className="flex items-center gap-3 px-6 pb-6 pt-7">
         <Logo />
         <div>
@@ -38,7 +38,7 @@ function Sidebar({ state, busy, mock, onLive, onReset }: { state: State; busy: b
         </div>
       </div>
 
-      <div className="mx-4 rounded-xl bg-stone-50 px-4 py-3 ring-1 ring-stone-200">
+      <div className="mx-4 rounded-xl bg-[#edf2e9] px-4 py-3 ring-1 ring-[#d3dccd]">
         <div className="text-[13px] font-semibold text-stone-900">{state.shop.name}</div>
         <div className="mt-0.5 text-[12px] text-stone-400">{new Date(state.shop.clock).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
       </div>
@@ -51,7 +51,7 @@ function Sidebar({ state, busy, mock, onLive, onReset }: { state: State; busy: b
             <li key={s.id} className="relative flex gap-3">
               <span
                 className={`relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
-                  done(i) ? "bg-emerald-500 text-white" : i === cur ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-500"
+                  done(i) ? "bg-emerald-500 text-white" : i === cur ? "bg-[#1f3b2f] text-white" : "bg-[#e3eadf] text-stone-500"
                 }`}
               >
                 {done(i) ? "✓" : i + 1}
@@ -66,7 +66,7 @@ function Sidebar({ state, busy, mock, onLive, onReset }: { state: State; busy: b
       </nav>
 
       <div className="mt-auto space-y-3 px-4 pb-6 pt-8">
-        <div className="rounded-xl bg-stone-50 p-4 ring-1 ring-stone-200">
+        <div className="rounded-xl bg-[#edf2e9] p-4 ring-1 ring-[#d3dccd]">
           <div className="mb-2 text-[11px] font-semibold text-stone-500">Models · Nebius Token Factory</div>
           <div className="space-y-1.5 text-[12px]">
             <div className="flex items-center gap-2">
@@ -78,13 +78,13 @@ function Sidebar({ state, busy, mock, onLive, onReset }: { state: State; busy: b
               <span className="truncate">{state.intake.text_model?.split("/").pop() ?? "text: rule parser"}</span>
             </div>
           </div>
-          <label className="mt-4 flex cursor-pointer items-center justify-between gap-2 border-t border-stone-200 pt-3 text-[12.5px] font-medium text-stone-800">
+          <label className="mt-4 flex cursor-pointer items-center justify-between gap-2 border-t border-[#d3dccd] pt-3 text-[12.5px] font-medium text-stone-800">
             <span>
               Live supplier search
               <span className="block text-[11px] font-normal text-stone-500">{state.live_search ? "Tavily + Nebius" : "labelled fixture"}</span>
             </span>
             <input type="checkbox" className="peer sr-only" checked={state.live_search} disabled={busy || mock} onChange={(e) => onLive(e.target.checked)} />
-            <span className="relative h-5 w-9 rounded-full bg-stone-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-stone-900 peer-checked:after:translate-x-4" />
+            <span className="relative h-5 w-9 rounded-full bg-stone-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-[#f6f8f3] after:transition-transform peer-checked:bg-[#1f3b2f] peer-checked:after:translate-x-4" />
           </label>
         </div>
         {mock && (
@@ -92,7 +92,7 @@ function Sidebar({ state, busy, mock, onLive, onReset }: { state: State; busy: b
             MOCK DATA · API offline
           </div>
         )}
-        <button disabled={busy} onClick={onReset} className="w-full rounded-xl px-3 py-2 text-[13px] font-semibold text-stone-700 ring-1 ring-stone-200 transition-colors hover:bg-stone-50 disabled:opacity-40">
+        <button disabled={busy} onClick={onReset} className="w-full rounded-xl px-3 py-2 text-[13px] font-semibold text-stone-700 ring-1 ring-[#d3dccd] transition-colors hover:bg-[#edf2e9] disabled:opacity-40">
           Reset demo
         </button>
         <p className="px-1 text-[11px] leading-snug text-stone-400">Synthetic bookings and stock. Supplier orders are simulated. NVIDIA retail blueprint patterns.</p>
@@ -133,13 +133,13 @@ function Headline({ state }: { state: State }) {
             </p>
           </div>
           {atRisk && !state.proposal && (
-            <a href="#sourcing" className="rounded-lg border border-stone-300 bg-white px-3.5 py-2 text-[13.5px] font-medium text-stone-800 hover:bg-stone-50">
+            <a href="#sourcing" className="rounded-lg border border-stone-300 bg-[#f6f8f3] px-3.5 py-2 text-[13.5px] font-medium text-stone-800 hover:bg-[#edf2e9]">
               Find suppliers
             </a>
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 divide-x divide-y divide-stone-100 lg:grid-cols-4 lg:divide-y-0">
+      <div className="grid grid-cols-2 divide-x divide-y divide-[#e1e8dc] lg:grid-cols-4 lg:divide-y-0">
         {protectedNow ? (
           <Stat label="Bookings protected" value={k.bookings_protected} sub={`${gbp(k.revenue_covered)} revenue covered`} tone="emerald" />
         ) : (
@@ -186,7 +186,7 @@ export default function App() {
 
   if (!state) {
     return (
-      <div className="grid min-h-screen place-items-center bg-stone-100 text-stone-500">
+      <div className="grid min-h-screen place-items-center bg-[#e3eadf] text-stone-500">
         <span className="flex items-center gap-2 text-sm"><Spinner /> Loading Iris…</span>
       </div>
     );
@@ -198,7 +198,7 @@ export default function App() {
   const etaFor = (sku: string) => state.orders.flatMap((o) => (o.status === "pending" ? o.lines : [])).find((l) => l.sku === sku)?.eta ?? null;
 
   return (
-    <div className="min-h-screen bg-stone-100 lg:pl-[272px]">
+    <div className="min-h-screen bg-[#e8eee4] lg:pl-[272px]">
       <Sidebar state={state} busy={busy} mock={mock} onLive={(on) => run(() => api.live(on))} onReset={() => run(api.reset)} />
 
       <main className="mx-auto max-w-[1320px] space-y-6 px-5 py-7 lg:px-10">
@@ -236,10 +236,10 @@ export default function App() {
                   <Runout line={hero} orderEta={etaFor(hero.sku)} height={320} />
                 </div>
                 {Object.keys(hero.contributing).length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-6 py-4 text-[12.5px] text-stone-500">
+                  <div className="flex flex-wrap items-center gap-2 border-t border-[#e1e8dc] px-6 py-4 text-[12.5px] text-stone-500">
                     Demand comes from
                     {Object.entries(hero.contributing).map(([svc, n]) => (
-                      <span key={svc} className="rounded-full bg-stone-100 px-2.5 py-1 font-semibold text-stone-700">
+                      <span key={svc} className="rounded-full bg-[#e3eadf] px-2.5 py-1 font-semibold text-stone-700">
                         {n} × {svc.toLowerCase()}
                       </span>
                     ))}
