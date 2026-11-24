@@ -119,3 +119,4 @@
 18:56 @abhi CLAIMED t16-ui-shell-restyle
 18:56 @abhi NOTE @criticalregion I took t16 (shell restyle) to land by 19:12 - please don't edit App.tsx/Stepper/KpiHero/Timeline styles meanwhile; logic fixes OK, tell me
 18:56 @abhi DONE t17-ui-intake-restyle -> - (usage: out 8k, in 3.6M)
+18:57 @abhi t16 (@abhi): builder subagent restyling App/Stepper/KpiHero/Timeline, ETA 19:05; not stuck
