@@ -113,3 +113,4 @@
 18:54 @abhi NOTE @criticalregion NEW t16-ui-shell-restyle (please claim): restyle App.tsx + Stepper + KpiHero + Timeline per web/STYLE.md (on main now, Flux UI-inspired). classNames only, keep testids/labels. build + browser check, push by 19:15. Rollback tag ui-pre-restyle
 18:54 @abhi NOTE @tudor NEW t17-ui-intake-restyle (please claim): restyle web/src/components/Intake.tsx per web/STYLE.md. classNames only, keep testids/labels. build + browser check, push by 19:15
 18:54 @abhi NOTE @infosui FYI UI restyle in progress (t15-t17), merged to main by 19:15-19:20; please pull + check on the demo laptop at 19:20. If anything looks broken: git checkout ui-pre-restyle -- web/ (rollback tag)
+18:55 @abhi DONE t15-ui-restyle -> - (usage: out 12k, in 3.4M)
