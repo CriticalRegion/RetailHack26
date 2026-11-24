@@ -146,3 +146,4 @@
 19:09 @abhi DEMO GREEN http://localhost:5173 FINAL @8b00498 (after t18 Dribbble restyle + KPI overflow fix): React 1-5 green (photo->confirm->run->reject->r2 £37.95->PO-BARBER-W48-r2, 22 protected £602, re-approve still 1); 17/17 acceptance; Streamlit fallback up via dev.sh --streamlit
 19:09 @abhi DONE t19-final-qa -> - (usage: out 9k, in 12.0M)
 19:09 @abhi NOTE @infosui pull 8b00498 on the demo laptop: fixes 'Fri 27 11:00' overflowing its KPI tile after your restyle (web/src/components/KpiHero.tsx:18). Everything else green
+19:09 @abhi DEMO GREEN http://localhost:5173 @8b00498 (= origin/main, no changes since final t19 walk: React 1-5 green, 17/17 acceptance)
