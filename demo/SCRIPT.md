@@ -1,20 +1,22 @@
-# Iris: 3-minute demo script
+# Iris: 3-minute demo script (presenter: Abhi)
 
-Two versions. Use **React UI** if the 19:15 go/no-go is green, otherwise the **Streamlit fallback** below. Same story, same numbers.
+Use the **React UI**. If anything breaks on stage, switch to the **Streamlit fallback** below: same story, same numbers.
 
-## React UI (if go at 19:15)
+## React UI
 
-Before going on stage: `.venv/bin/uvicorn server:app --port 8000`, then in `web/`: `npm run dev` (http://localhost:5173). Call `POST /api/reset` (or the reset button), live search **off**. Backup: the Streamlit fallback and the screenshots in `demo/`.
+**Before going on stage (demo laptop):** `./scripts/dev.sh` (API :8000 + web http://localhost:5173), click **Reset demo** (top right), live supplier search **off**. Have `demo/screens/` open in a second tab as a last-resort backup.
 
 | Time | Say | Do |
 |---|---|---|
-| 0:00 | "Barbershops run out of the product they need for the bookings they already have. Textured crops are up, the clay runs out on Friday, and the owner finds out mid-cut." | Stepper on **Stock** |
-| 0:20 | "A stock count is just a photo of the count sheet. A Nebius vision model reads it, and the owner confirms before anything changes." | **Use sample photo** → point at the review rows and the LIVE/REPLAY badge → tick the rows → **Confirm** |
-| 0:50 | "Bookings times product recipes gives 7-day demand, projected in time order. The red dot is the first booking we can't serve: Friday 11:00, a textured crop. Twenty-two bookings are at risk." | Stepper moves to **Forecast**: point at the KPI hero, then the red marker on the run-out chart |
-| 1:15 | "The sourcing agent calls one typed, read-only supplier search tool, adapted from NVIDIA's Retail Shopping Assistant. Code enforces same product, same size, delivered before Friday." | **Run Iris** → basket r1: BarberHub £26.50 → point at the late-but-cheaper card (BulkBarber, misses bookings) and the evidence labels |
-| 1:45 | "Say I don't trust BarberHub. I reject with a reason, and Iris searches again without them. Still no order." | Type "not BarberHub, they were late last time" → **Reject** → r2: ShearCo £37.95, the change note, *no order placed* |
-| 2:10 | "Only the owner's approval places an order. One click, one order, and the stock shows as incoming. Clicking again doesn't duplicate it." | **Approve** → order PO-BARBER-W48-r2 → back on the chart: dashed red line without the order, green line with it, "order lands Thu 09:00" → **Approve** again → still 1 order |
-| 2:35 | "What works: photo and text intake, the forecast, evidence-checked sourcing, and reject, retry, approve. Bookings and orders are simulated. Next: real Fresha bookings and agentic checkout with suppliers." | KPI hero: 22 bookings protected · £602 covered |
+| 0:00 | "This is for the owner of a barbershop. They already know next week's demand, because it's in the booking book. But they still find out the clay is gone mid-cut." | Page top: point at **22 bookings at risk · runs out Fri 27 11:00** |
+| 0:20 | "Iris starts with a stock count. It's just a photo of the count sheet, read by a vision model on Nebius Token Factory. Nothing changes until the owner ticks the rows." | **Use sample photo**. *Live it takes ~15 s: say "it's reading labels and counts" while it loads; if it hangs past 20 s, switch to **Pasted text** → **Read text** (~8 s).* Tick both rows → **Confirm 2 counts** |
+| 0:50 | "Bookings times each service's product recipe gives the week's demand, projected in time order. The red marker is the first booking we can't serve: Friday at 11, a textured crop. Twenty-two bookings are at risk, £602 of revenue." | Point at the run-out chart: red marker, line dropping below zero |
+| 1:15 | "Iris's sourcing agent calls one typed, read-only supplier search tool, a pattern from NVIDIA's Retail Shopping Assistant. The rules live in code: same product, same size, delivered before Friday. It proposes BarberHub at £26.50." | **Run Iris: find suppliers** → basket r1. Point at the **LATE · misses 16 bookings** card: "BulkBarber is cheapest per 100 ml, £9 against £13.25, but it arrives Monday, so it can't win." |
+| 1:45 | "Say I don't trust BarberHub. I reject with a reason, and Iris searches again without them. Note: still no order." | Type `not BarberHub, they were late last time` → **Reject & search again** → r2 ShearCo £37.95, the change note, "no order placed" |
+| 2:10 | "Only the owner's approval places an order. One click, one order, and the stock shows as incoming, separate from what's on the shelf. And if I click again, nothing is duplicated." | **Approve r2 · £37.95** → order PO-BARBER-W48-r2, "22 bookings protected · £602" → **Approve r2 again (duplicate test)** → toast "Still 1 order" |
+| 2:35 | "What works today: photo and text intake on Nebius, the forecast, evidence-checked sourcing, and reject, retry, approve. Bookings and orders are simulated. What we learned: let the AI read and explain, but keep the maths and the order button in code. Next: real Fresha bookings and agentic checkout with suppliers." | Scroll back to the chart: the line with the order stays above zero |
+
+**If asked:** answers to likely judge questions are in `demo/QA.md`.
 
 ## Streamlit fallback
 
