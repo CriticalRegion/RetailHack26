@@ -106,3 +106,4 @@
 18:50 @abhi DEMO GREEN http://localhost:5173 @26e3014: no code changes since last browser walk (run->reject->r2->1 order); web+API up
 18:50 @tudor DONE t12-live-qa -> demo/backup-streamlit.webm (usage: out 16k, in 9.5M)
 18:50 @tudor STUCK (autonomous): no progress after 3 tries on: All tasks are done but the demo hasn't been checked since: run /demo-check.
+18:53 @abhi CLAIMED t15-ui-restyle
