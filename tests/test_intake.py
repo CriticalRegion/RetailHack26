@@ -38,3 +38,11 @@ def test_llm_path_uses_model_json(monkeypatch):
     monkeypatch.setattr(intake.llm, "chat_json", lambda s, u: {"items": [
         {"raw_label": "2 tubs clay", "sku": "clay-matte-100ml", "count": 2, "count_unit": "item"}]})
     assert extract_text("whatever")[0]["quantity"] == 200
+
+
+def test_lenient_parse_of_drifting_model_json():
+    obs = intake._parse_items({"items": [
+        {"raw_label": "Northline Matte Clay", "sku": "clay-matte-100ml", "count": "120 ml", "count_unit": "ml"},
+        {"raw_label": "Neck strips", "count": "400", "count_unit": "strips", "extra": 1}]})
+    rows = to_rows(obs, intake.PRODUCTS, "t")
+    assert [r["quantity"] for r in rows] == [120, 400]

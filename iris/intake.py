@@ -92,11 +92,34 @@ def to_rows(obs: list[Observation], products: dict[str, ProductSpec], source: st
     return rows
 
 
+def _num(v) -> Optional[float]:
+    """Lenient number: 120, "120", "120 ml", "1,200" -> float; anything else -> None."""
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return float(v)
+    m = re.search(r"\d+(?:[.,]\d+)*", str(v or ""))
+    return float(m.group(0).replace(",", "")) if m else None
+
+
+def _clean(it: dict) -> dict:
+    """Models drift from the schema (string counts, odd count_unit, extra keys): coerce before validating."""
+    it = {k: it.get(k) for k in ("raw_label", "sku", "count", "count_unit", "evidence", "ambiguity")}
+    it["raw_label"] = str(it.get("raw_label") or "")[:120] or "(no label)"
+    it["count"] = _num(it.get("count"))
+    unit = str(it.get("count_unit") or "").lower()
+    it["count_unit"] = "item" if unit in ("item", "items", "tub", "tubs", "box", "boxes", "pot", "pots") else "base"
+    for k in ("sku", "evidence", "ambiguity"):
+        it[k] = None if k == "sku" and not it.get(k) else str(it.get(k) or "")
+    return it
+
+
 def _parse_items(data: dict) -> list[Observation]:
     out = []
-    for it in data.get("items", []):
+    items = data.get("items") or data.get("products") or data.get("stock") or []
+    for it in items if isinstance(items, list) else []:
+        if not isinstance(it, dict):
+            continue
         try:
-            out.append(Observation(**it))
+            out.append(Observation(**_clean(it)))
         except ValidationError:
             out.append(Observation(raw_label=str(it.get("raw_label", it))[:80], ambiguity="unparseable row"))
     return out
