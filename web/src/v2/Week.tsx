@@ -23,7 +23,7 @@ export function Week({ state }: { state: State }) {
   const runOut = hero.first_at_risk ?? (ordered ? state.kpis.first_run_out : null);
 
   return (
-    <div className="rounded-xl border border-[#d3dccd] bg-[#f6f8f3]">
+    <div className="rounded-xl border border-[#d5d9d1] bg-[#f8f8f6]">
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-6 pt-5">
         <h3 className="text-[15px] font-semibold tracking-tight text-stone-900">Your week · {hero.name}</h3>
         <p className="text-[12.5px] text-stone-500">appointments that use it, day by day</p>
@@ -39,7 +39,7 @@ export function Week({ state }: { state: State }) {
           const isRunOut = runOut && dayKey(new Date(runOut.time)) === k;
           const isDelivery = delivery && dayKey(new Date(delivery.eta)) === k;
           const closed = total === 0;
-          const tone = short > 0 ? "border-rose-300 bg-rose-50" : saved > 0 ? "border-emerald-300 bg-emerald-50" : "border-[#d3dccd] bg-[#f6f8f3]";
+          const tone = short > 0 ? "border-rose-300 bg-rose-50" : saved > 0 ? "border-emerald-300 bg-emerald-50" : "border-[#d5d9d1] bg-[#f8f8f6]";
           return (
             <div key={k} className={`flex min-h-[132px] flex-col rounded-lg border p-3 ${tone}`}>
               <div className="flex items-baseline justify-between">

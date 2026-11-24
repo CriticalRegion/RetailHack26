@@ -104,9 +104,9 @@ export function Todo({
 
   return (
     <Card data-testid="basket" className="overflow-hidden">
-      <div className="border-l-4 border-[#1f3b2f] px-6 py-5">
+      <div className="border-l-4 border-[#404e3b] px-6 py-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-[12.5px] font-semibold text-[#1f3b2f]">Iris suggests</div>
+          <div className="text-[12.5px] font-semibold text-[#404e3b]">Iris suggests</div>
           <span className="text-[11.5px] text-stone-400">suggestion {p.revision}</span>
         </div>
 
@@ -122,17 +122,17 @@ export function Todo({
               Order {line.packs} × {block?.options.find((o) => o.offer_id === line.offer_id)?.listing ?? line.product} from {line.supplier}
             </h3>
             <div className="mt-3 grid grid-cols-3 gap-3">
-              <div className="rounded-lg bg-[#edf2e9] px-3 py-2.5">
+              <div className="rounded-lg bg-[#eef0eb] px-3 py-2.5">
                 <div className="text-[11.5px] text-stone-500">You pay</div>
                 <div data-testid="basket-total" className="text-[20px] font-semibold tabular-nums text-stone-900">{gbp(p.total)}</div>
                 <div className="text-[11px] text-stone-500">incl. delivery</div>
               </div>
-              <div className="rounded-lg bg-[#edf2e9] px-3 py-2.5">
+              <div className="rounded-lg bg-[#eef0eb] px-3 py-2.5">
                 <div className="text-[11.5px] text-stone-500">Arrives</div>
                 <div className="text-[20px] font-semibold text-stone-900">{new Date(line.eta).toLocaleDateString("en-GB", { weekday: "short" })} {hm(line.eta)}</div>
                 <div className="text-[11px] text-emerald-700">in time for {risk ? `${new Date(risk.time).toLocaleDateString("en-GB", { weekday: "short" })} ${hm(risk.time)}` : "the week"}</div>
               </div>
-              <div className="rounded-lg bg-[#edf2e9] px-3 py-2.5">
+              <div className="rounded-lg bg-[#eef0eb] px-3 py-2.5">
                 <div className="text-[11.5px] text-stone-500">You get</div>
                 <div className="text-[20px] font-semibold tabular-nums text-stone-900">{num(line.packs * line.units_per_pack, line.unit)}</div>
                 <div className="text-[11px] text-stone-500">covers {hero?.at_risk_count ?? k.bookings_at_risk} appointments</div>
@@ -172,7 +172,7 @@ export function Todo({
                   onChange={(e) => setFb(e.target.value)}
                   aria-label="Reject with feedback"
                   placeholder="What's wrong with this one? e.g. not BarberHub, they were late last time"
-                  className="h-12 min-w-0 flex-1 rounded-lg border-0 bg-[#edf2e9] px-3.5 text-[13px] text-stone-800 ring-1 ring-inset ring-[#d3dccd] placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                  className="h-12 min-w-0 flex-1 rounded-lg border-0 bg-[#eef0eb] px-3.5 text-[13px] text-stone-800 ring-1 ring-inset ring-[#d5d9d1] placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400"
                 />
                 <Button type="submit" size="lg" variant="danger" disabled={busy} data-testid="reject">
                   {pending === "reject" ? <Spinner /> : null}
@@ -185,7 +185,7 @@ export function Todo({
       </div>
 
       {others.length > 0 && (
-        <div className="border-t border-[#e1e8dc] px-6 py-4">
+        <div className="border-t border-[#e6e8e3] px-6 py-4">
           <div className="mb-2 text-[12px] font-medium text-stone-500">Other options Iris checked</div>
           <ul className="space-y-1.5 text-[13px]">
             {others.map((o) => {

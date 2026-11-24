@@ -15,7 +15,7 @@ export const num = (n: number, unit = "") => `${Number.isInteger(n) ? n : n.toFi
 export function Card({ children, className = "", ...rest }: { children: ReactNode; className?: string } & Record<string, unknown>) {
   return (
     <div
-      className={`rounded-xl border border-[#d3dccd] bg-[#f6f8f3] ${className}`}
+      className={`rounded-xl border border-[#d5d9d1] bg-[#f8f8f6] ${className}`}
       {...rest}
     >
       {children}
@@ -37,11 +37,11 @@ export function CardHeader({ title, sub, right }: { title: ReactNode; sub?: Reac
 
 type Tone = "indigo" | "emerald" | "rose" | "amber" | "stone" | "dark";
 const TONES: Record<Tone, string> = {
-  indigo: "bg-[#1f3b2f] text-white ring-[#1f3b2f]",
+  indigo: "bg-[#404e3b] text-white ring-[#404e3b]",
   emerald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   rose: "bg-rose-50 text-rose-700 ring-rose-600/15",
   amber: "bg-amber-50 text-amber-800 ring-amber-600/20",
-  stone: "bg-[#e3eadf] text-stone-600 ring-stone-500/10",
+  stone: "bg-[#e3e7df] text-stone-600 ring-stone-500/10",
   dark: "bg-stone-900 text-white ring-stone-900",
 };
 
@@ -56,11 +56,11 @@ export function Badge({ tone = "stone", children, dot = false }: { tone?: Tone; 
 
 type Variant = "primary" | "approve" | "secondary" | "ghost" | "danger";
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-[#1f3b2f] text-white hover:bg-[#2c5041]",
+  primary: "bg-[#404e3b] text-white hover:bg-[#55664f]",
   approve: "bg-emerald-700 text-white hover:bg-emerald-800",
-  secondary: "bg-[#f6f8f3] text-stone-800 ring-1 ring-inset ring-[#d3dccd] hover:bg-[#edf2e9]",
-  ghost: "text-stone-600 hover:bg-[#e3eadf]",
-  danger: "bg-[#f6f8f3] text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-50",
+  secondary: "bg-[#f8f8f6] text-stone-800 ring-1 ring-inset ring-[#d5d9d1] hover:bg-[#eef0eb]",
+  ghost: "text-stone-600 hover:bg-[#e3e7df]",
+  danger: "bg-[#f8f8f6] text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-50",
 };
 
 export function Button({
@@ -86,7 +86,7 @@ export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
 }
 
 export function Stat({ label, value, sub, tone = "stone" }: { label: string; value: ReactNode; sub?: ReactNode; tone?: Tone }) {
-  const bar = { indigo: "bg-[#1f3b2f]", emerald: "bg-emerald-500", rose: "bg-rose-500", amber: "bg-amber-500", stone: "bg-stone-300", dark: "bg-stone-900" }[tone];
+  const bar = { indigo: "bg-[#404e3b]", emerald: "bg-emerald-500", rose: "bg-rose-500", amber: "bg-amber-500", stone: "bg-stone-300", dark: "bg-stone-900" }[tone];
   return (
     <div className="relative min-w-0 px-6 py-5">
       <div className="flex items-center gap-2 text-[12px] font-medium text-stone-500">

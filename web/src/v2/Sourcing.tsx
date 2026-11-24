@@ -18,8 +18,8 @@ function OfferTile({ o, excluded }: { o: OfferOption; excluded: boolean }) {
   return (
     <div
       data-testid={`offer-${o.offer_id}`}
-      className={`relative flex flex-col rounded-lg bg-[#f6f8f3] p-4 ring-1 ${
-        excluded ? "opacity-50 ring-[#d3dccd]" : o.tag === "selected" ? "ring-1 ring-[#1f3b2f]" : late ? "ring-amber-200" : "ring-[#d3dccd]"
+      className={`relative flex flex-col rounded-lg bg-[#f8f8f6] p-4 ring-1 ${
+        excluded ? "opacity-50 ring-[#d5d9d1]" : o.tag === "selected" ? "ring-1 ring-[#404e3b]" : late ? "ring-amber-200" : "ring-[#d5d9d1]"
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -74,7 +74,7 @@ function OfferBlockView({ b, excluded, atRisk }: { b: OfferBlock; excluded: stri
         ))}
       </div>
       {b.status !== "unmet" && b.reason && (
-        <p className="mt-3 rounded-xl bg-[#edf2e9] px-4 py-3 text-[13px] leading-relaxed text-stone-700 ring-1 ring-[#d3dccd]">
+        <p className="mt-3 rounded-xl bg-[#eef0eb] px-4 py-3 text-[13px] leading-relaxed text-stone-700 ring-1 ring-[#d5d9d1]">
           <span className="font-semibold">Why: </span>{b.reason}
         </p>
       )}
@@ -85,7 +85,7 @@ function OfferBlockView({ b, excluded, atRisk }: { b: OfferBlock; excluded: stri
           </summary>
           <ul className="mt-2 space-y-1.5">
             {leads.map((o) => (
-              <li key={o.offer_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-[#edf2e9] px-3 py-2 ring-1 ring-stone-100">
+              <li key={o.offer_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-[#eef0eb] px-3 py-2 ring-1 ring-stone-100">
                 <span className="font-semibold text-stone-800">{o.supplier}</span>
                 <span className="truncate text-stone-500">{o.listing}</span>
                 <span className="ml-auto text-amber-700">{o.issues.join("; ")}</span>
@@ -202,7 +202,7 @@ export function Sourcing({
             </div>
           )}
 
-          <div className="mt-4 divide-y divide-[#e1e8dc] border-y border-[#e1e8dc]">
+          <div className="mt-4 divide-y divide-[#e6e8e3] border-y border-[#e6e8e3]">
             {p.lines.length === 0 && (
               <div data-testid="basket-empty" className="px-6 py-4 text-[13px] text-stone-500">Basket is empty.</div>
             )}
@@ -224,8 +224,8 @@ export function Sourcing({
                   </span>
                   {open && (
                     <span className="flex items-center gap-1">
-                      <button disabled={busy || l.packs <= 1} onClick={() => onEdit(l.sku, l.packs - 1)} aria-label={`One pack fewer of ${l.product}`} className="h-6 w-6 rounded-md ring-1 ring-[#d3dccd] hover:bg-[#edf2e9] disabled:opacity-30">−</button>
-                      <button disabled={busy} onClick={() => onEdit(l.sku, l.packs + 1)} aria-label={`One pack more of ${l.product}`} className="h-6 w-6 rounded-md ring-1 ring-[#d3dccd] hover:bg-[#edf2e9] disabled:opacity-30">+</button>
+                      <button disabled={busy || l.packs <= 1} onClick={() => onEdit(l.sku, l.packs - 1)} aria-label={`One pack fewer of ${l.product}`} className="h-6 w-6 rounded-md ring-1 ring-[#d5d9d1] hover:bg-[#eef0eb] disabled:opacity-30">−</button>
+                      <button disabled={busy} onClick={() => onEdit(l.sku, l.packs + 1)} aria-label={`One pack more of ${l.product}`} className="h-6 w-6 rounded-md ring-1 ring-[#d5d9d1] hover:bg-[#eef0eb] disabled:opacity-30">+</button>
                       <button disabled={busy} onClick={() => onRemove(l.sku)} className="ml-1 rounded-md px-1.5 py-0.5 text-rose-600 hover:bg-rose-50 disabled:opacity-30">Remove</button>
                     </span>
                   )}
@@ -254,7 +254,7 @@ export function Sourcing({
                     onChange={(e) => setFb(e.target.value)}
                     aria-label="Reject with feedback"
                     placeholder="Why? e.g. not BarberHub, they were late last time"
-                    className="h-10 w-full rounded-xl border-0 bg-[#edf2e9] px-3.5 text-[13px] text-stone-800 ring-1 ring-inset ring-[#d3dccd] placeholder:text-stone-400 focus:bg-[#f6f8f3] focus:outline-none focus:ring-2 focus:ring-rose-300"
+                    className="h-10 w-full rounded-xl border-0 bg-[#eef0eb] px-3.5 text-[13px] text-stone-800 ring-1 ring-inset ring-[#d5d9d1] placeholder:text-stone-400 focus:bg-[#f8f8f6] focus:outline-none focus:ring-2 focus:ring-rose-300"
                   />
                   <Button type="submit" variant="danger" className="w-full" disabled={busy} data-testid="reject">
                     {pending === "reject" ? <Spinner /> : null}
@@ -273,10 +273,10 @@ export function Sourcing({
 
         {order && (
           <Card data-testid="order-confirm" className="overflow-hidden">
-            <div className="border-b border-[#d3dccd] px-6 py-5">
+            <div className="border-b border-[#d5d9d1] px-6 py-5">
               <div className="flex items-center justify-between">
                 <div className="text-[12px] font-semibold text-emerald-700">Simulated order placed</div>
-                <span data-testid="order-count" className="rounded bg-[#e3eadf] px-1.5 py-0.5 text-[11px] font-medium text-stone-600">
+                <span data-testid="order-count" className="rounded bg-[#e3e7df] px-1.5 py-0.5 text-[11px] font-medium text-stone-600">
                   {state.orders.length} {state.orders.length === 1 ? "order" : "orders"}
                 </span>
               </div>
