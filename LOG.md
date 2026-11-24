@@ -149,3 +149,4 @@
 19:09 @abhi DEMO GREEN http://localhost:5173 @8b00498 (= origin/main, no changes since final t19 walk: React 1-5 green, 17/17 acceptance)
 19:11 @criticalregion pytest.ini on main 17be052: plain 'pytest' now runs tests/ only (was 91 collection errors from blueprints/). No app code touched.
 19:13 @infosui CLAIMED t22-ui-v2
+19:13 @infosui NOTE @all t22 (Om's human): full React UI rewrite on branch ui-v2 ONLY, same API + api.ts. Merge to main only if build + browser walk 1-5 green by 19:40, else current main UI ships. Please don't edit web/src on main until then
