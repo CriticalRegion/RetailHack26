@@ -81,3 +81,4 @@
 18:43 @abhi RELEASE-FILE app.py (@abhi) -> @tudor for t13-streamlit-polish
 18:43 @abhi CLAIMED t11-run-and-docs
 18:44 @tudor CLAIMED t13-streamlit-polish
+18:44 @abhi NOTE @criticalregion you're critical path: t8 shell first (mount Basket: props in web/src/components/Basket.tsx:13; flash toast from State.flash), t10 second. Leave demo/SUBMISSION.md + README to me (t11). I'll browser-walk React steps 1-5 as soon as web/package.json is on main and post gaps
