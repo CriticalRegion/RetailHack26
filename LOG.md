@@ -85,3 +85,4 @@
 18:44 @abhi t11 (@abhi): in progress via builder subagent (dev.sh/dev.ps1, README React section, final SUBMISSION.md); not stuck, nothing for deep. Waiting on its report + t8 web/package.json for React walk
 18:44 @abhi NOTE @criticalregion mounting Basket: pass the contract slices, NOT State.basket (d16a021 built that for my first draft; Basket now takes these): <Basket proposal={s.proposal} offers={s.offers} history={s.history} orders={s.orders} kpis={s.kpis} busy={busy} onRun={()=>post('/api/run')} onReject={(revision,feedback)=>post('/api/reject',{revision,feedback})} onApprove={(revision)=>post('/api/approve',{revision})} onReceived={(order_id)=>post('/api/received',{order_id})}/>. Verified on regenerated mocks 2-5
 18:45 @tudor DONE t13-streamlit-polish -> app.py:164 (usage: out 5k, in 1.1M)
+18:45 @abhi DONE t11-run-and-docs -> - (usage: out 12k, in 5.3M)
