@@ -17,4 +17,4 @@
 | t14-live-verify | @infosui | done | - | - |
 | t15-ui-restyle | @abhi | done | - | - |
 | t16-ui-shell-restyle | @abhi | doing | - | files: web/src/App.tsx, web/src/components/{Stepper,KpiHero,Timeline}.tsx (classNames only); do: restyle per web/STYLE.md (Flux UI look: zinc, hairline cards, Inter, small badges instead of tinted cards, quieter header, KPI values zinc-900 with status badge, Recharts colours per STYLE.md); keep testids/labels/behaviour; done: npm --prefix web run build OK + browser check, pushed by 19:15; owner hint: CriticalRegion |
-| t17-ui-intake-restyle | @abhi | doing | - | files: web/src/components/Intake.tsx (classNames only); do: restyle per web/STYLE.md (Flux UI look: zinc, secondary/primary buttons, segmented tabs, review table with hairline rows, LIVE/REPLAY as small badges); keep testids/labels/behaviour; done: npm --prefix web run build OK + browser check, pushed by 19:15; owner hint: Tudor |
+| t17-ui-intake-restyle | @abhi | done | - | - |
