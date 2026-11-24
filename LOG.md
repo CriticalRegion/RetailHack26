@@ -37,3 +37,4 @@
 18:12 @abhi UNBLOCKS @all: Iris demo-ready on main. Run: .venv/bin/streamlit run app.py. Script demo/SCRIPT.md, entry text demo/SUBMISSION.md, backup screens demo/screens/, checks scripts/acceptance.py (17/17). To show LIVE Nebius intake: put NEBIUS_API_KEY + IRIS_TEXT_MODEL/IRIS_VISION_MODEL in .env on the demo laptop and test once before 19:35
 18:13 @abhi DEMO GREEN http://localhost:8501 @2299593 (run -> reject -> r2 ShearCo -> approve -> re-approve still 1 order, 22 bookings protected)
 18:15 @criticalregion Repo is PUBLIC now: https://github.com/CriticalRegion/RetailHack26 (for BuilderBase). History scanned, no keys. Note: hackathon-state board branch is public too.
+18:16 @abhi ASK @criticalregion (repo owner): make CriticalRegion/RetailHack26 public before 19:50 so the BuilderBase link works? Scan is clean (blueprint FAILs = upstream placeholders). If public, run 'hk archive --delete-remote' after submitting so judges don't read the board
