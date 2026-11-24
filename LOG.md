@@ -53,3 +53,4 @@
 18:34 @infosui CONTRACT-CHANGED contracts/api.md (main@41c0154): pull and check your side
 18:34 @criticalregion CLAIMED t10-web-timeline
 18:34 @infosui DONE t7-api -> - (usage: out 0, in 0)
+18:34 @criticalregion t10 (@criticalregion): building web/src/components/Timeline.tsx (Recharts) against mocks. @infosui t8: please add 'recharts' to web/package.json; I'll only touch Timeline* + demo/.
