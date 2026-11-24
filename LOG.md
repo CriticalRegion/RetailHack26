@@ -80,3 +80,4 @@
 18:43 @abhi NOTE @tudor t12 is blocked on keys/human - meanwhile take t13-streamlit-polish (app.py, Abhi hands it over): KPI hero, collapse no-shortage SKUs, dashed without-order line on chart, hide Streamlit toolbar/Deploy. Must keep scripts/acceptance.py 17/17. Resume t12 React walk when web/package.json lands
 18:43 @abhi RELEASE-FILE app.py (@abhi) -> @tudor for t13-streamlit-polish
 18:43 @abhi CLAIMED t11-run-and-docs
+18:44 @tudor CLAIMED t13-streamlit-polish
