@@ -11,3 +11,4 @@
 18:01 @infosui DONE t0-scaffold -> - (usage: out 8k, in 1.8M)
 18:01 @infosui CLAIMED t3-intake
 18:01 @criticalregion DONE t4-sourcing -> branch t4-sourcing (iris/sourcing.py, iris/agent.py)
+18:01 @criticalregion UNBLOCKS @abhi @all: t4 done on branch t4-sourcing (not main yet). SourcingAgent().propose(shortages, now) -> Proposal; .reject(p, feedback, skus) -> next revision. iris/agent.py, tests/test_sourcing.py
