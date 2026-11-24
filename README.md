@@ -2,6 +2,10 @@
 
 > **Never run out of what's booked.**
 
+[![Iris demo: shelf photo, run-out forecast, supplier suggestion, reject with feedback, approve](demo/iris-demo.gif)](demo/iris-demo.mp4)
+
+**[▶ Watch the 90-second demo with captions (MP4)](demo/iris-demo.mp4)**: live Nebius models on a staged shelf photo, then forecast, supplier search, reject with feedback, and approve (simulated order, idempotent).
+
 Salons and barbershops know their demand a week ahead: it's in the booking book. Iris turns next week's appointments and a quick stock count (a photo or a pasted note) into a supplier basket the owner can approve. It shows which booking will run short, why the product is needed, and which supplier can deliver in time. If the owner rejects a proposal, Iris searches again using their feedback. Approval places a simulated order and records the incoming stock.
 
 Built at the Retail AI & Agents Hackathon (Innovators Guild at Fresha, London, 24 Nov 2026), Retail AI track (Nebius / NVIDIA).
