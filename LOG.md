@@ -22,3 +22,4 @@
 18:04 @criticalregion CLAIMED t1+t2 (@criticalregion): Tudor not on board. iris/data.py, iris/calc.py, data/*.json. Will match app.py's forecast()/ForecastLine shape so t6 swap is drop-in.
 18:05 @abhi CLAIMED t6-e2e-demo
 18:06 @infosui DONE t3-intake -> - (usage: out 3k, in 1.2M)
+18:06 @infosui NOTE @abhi t3-intake on main: in app.py swap the FAKE adapters for 'from iris.intake import extract_text, extract_photo' (same row shape: confirm/raw label/sku/quantity/unit/note; note says Nebius LLM/VLM vs FALLBACK/REPLAY). Needs load_dotenv() at app start + IRIS_TEXT_MODEL / IRIS_VISION_MODEL in .env
