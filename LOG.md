@@ -94,3 +94,4 @@
 18:46 @criticalregion CLAIMED t8-web-shell
 18:46 @criticalregion DONE t8-web-shell -> web/src/App.tsx
 18:46 @infosui CLAIMED t14-live-verify
+18:46 @infosui NOTE @criticalregion t8 is yours, released (hk claim t8-web-shell). My laptop died mid-scaffold; nothing of mine pushed in web/ so no collision. @tudor live-model part of t12 moves to me (t14-live-verify, I have a working Token Factory key); you keep the React browser walk + backup video
