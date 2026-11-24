@@ -7,3 +7,4 @@
 | t4-sourcing | @criticalregion | done | t1-schemas | branch t4-sourcing (iris/sourcing.py, iris/agent.py) |
 | t5-app-orders | @abhi | done | t1-schemas | - |
 | t6-e2e-demo | @abhi | done | t2-data-forecast,t3-intake,t4-sourcing,t5-app-orders | - |
+| t7-api | - | todo | - | files: server.py, tests/test_api.py; do: FastAPI over iris.calc/agent/orders/intake per contracts/api.md, CORS for localhost:5173, uvicorn server:app --port 8000; done: every contract endpoint returns the contract JSON, demo path via curl; owner hint: CriticalRegion |
