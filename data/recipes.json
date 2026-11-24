@@ -2,22 +2,22 @@
  "Textured crop": {
   "price": 28,
   "recipe": {
-   "CLAY-MATTE-100": 6,
-   "NECK-STRIP": 1
+   "clay-matte-100ml": 6,
+   "neck-strips": 1
   }
  },
  "Skin fade": {
   "price": 24,
   "recipe": {
-   "CLAY-MATTE-100": 2,
-   "NECK-STRIP": 1
+   "clay-matte-100ml": 2,
+   "neck-strips": 1
   }
  },
  "Scissor cut": {
   "price": 30,
   "recipe": {
-   "CLAY-MATTE-100": 3,
-   "NECK-STRIP": 1
+   "clay-matte-100ml": 3,
+   "neck-strips": 1
   }
  }
 }

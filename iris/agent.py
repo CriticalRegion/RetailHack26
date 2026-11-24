@@ -179,7 +179,7 @@ def grounded_reason(line: ProposalLine, llm: Optional[LLM]) -> str:
 
 
 def plan_query(spec: ProductSpec, region: str, llm: Optional[LLM]) -> str:
-    base = f'"{spec.brand} {spec.product}"' + (f" {spec.item_size:g}{spec.unit}" if spec.unit != "units" else "") + f" {region}"
+    base = f'"{spec.brand} {spec.product}"' + (f" {spec.item_size:g}{spec.unit}" if spec.unit != "unit" else "") + f" {region}"
     if llm is None:
         return base
     try:
@@ -189,7 +189,7 @@ def plan_query(spec: ProductSpec, region: str, llm: Optional[LLM]) -> str:
     except Exception:
         return base
     # Must stay on the exact product.
-    if q and spec.brand.lower() in q.lower() and (spec.unit == "units" or f"{spec.item_size:g}" in q) and len(q) < 200:
+    if q and spec.brand.lower() in q.lower() and (spec.unit == "unit" or f"{spec.item_size:g}" in q) and len(q) < 200:
         return q
     return base
 

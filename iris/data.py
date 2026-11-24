@@ -22,7 +22,7 @@ DEMO_NOW = datetime(2026, 11, 24, 9, 0)  # Tue 24 Nov 2026 09:00, fixed demo clo
 HORIZON_DAYS = 7
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
-HERO_SKU = "CLAY-MATTE-100"
+HERO_SKU = "clay-matte-100ml"
 
 
 class ProductSpec(BaseModel):
@@ -34,7 +34,7 @@ class ProductSpec(BaseModel):
     product: str
     variant: str = ""  # "" = any variant
     item_size: float  # base units per item: 100 (ml) per tub, 1 per strip
-    unit: Literal["ml", "g", "units"]
+    unit: Literal["ml", "g", "unit"]
     aliases: list[str] = Field(default_factory=list)
 
     @property
@@ -43,12 +43,12 @@ class ProductSpec(BaseModel):
 
 
 PRODUCTS: dict[str, ProductSpec] = {
-    "CLAY-MATTE-100": ProductSpec(
-        sku="CLAY-MATTE-100", name="Brand X Matte Clay 100 ml", brand="Brand X", product="Matte Clay",
-        variant="Matte", item_size=100, unit="ml", aliases=["matte clay", "clay", "brand x"]),
-    "NECK-STRIP": ProductSpec(
-        sku="NECK-STRIP", name="Neck strips", brand="Barberline", product="Neck Strips",
-        item_size=1, unit="units", aliases=["neck strip", "strips", "neck paper"]),
+    "clay-matte-100ml": ProductSpec(
+        sku="clay-matte-100ml", name="Northline Matte Clay 100 ml", brand="Northline", product="Matte Clay",
+        variant="Matte", item_size=100, unit="ml", aliases=["matte clay", "northline clay", "matte clay 100ml"]),
+    "neck-strips": ProductSpec(
+        sku="neck-strips", name="Barberline Neck Strips", brand="Barberline", product="Neck Strips",
+        item_size=1, unit="unit", aliases=["neck strip", "neck paper"]),
 }
 
 

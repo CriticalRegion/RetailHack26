@@ -27,7 +27,7 @@ def test_hero_clay_shortfall():
     assert clay.first_at_risk["id"] == "BK-030"
     assert clay.first_at_risk["time"] == datetime(2026, 11, 27, 11, 0)  # Friday textured crop
     assert clay.first_at_risk["service"] == "Textured crop"
-    assert fc["NECK-STRIP"].uncovered == 0 and fc["NECK-STRIP"].first_at_risk is None
+    assert fc["neck-strips"].uncovered == 0 and fc["neck-strips"].first_at_risk is None
 
 
 def test_cancelled_booking_excluded():
