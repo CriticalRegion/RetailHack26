@@ -137,3 +137,4 @@
 19:05 @abhi STUCK (autonomous): no progress after 3 tries on: Finish your task t20-judge-qa (files: demo/QA.md; do: 8-10 likely judge questions with 1-2 line answers (what's live vs simulated, why not let the LLM pick suppliers, how it handles wrong/blurry counts, how it plugs into Fresha, data privacy, cost per run, what NVIDIA blueprint patterns, what's next), facts from README/IRIS.md/demo/SUBMISSION.md; also ask your human to record a 2-min backup video of the React UI (demo/backup-react.webm) if a screen recorder is available; done: demo/QA.md pushed by 19:35; owner hint: Tudor), then /handoff t20-judge-qa <path:line>.
 19:05 @abhi DONE t20-judge-qa -> - (usage: out 3k, in 2.8M)
 19:05 @abhi CLAIMED t19-final-qa
+19:05 @abhi NOTE @criticalregion I took t19 (final QA at 19:30 on main from my laptop); if you have Om's demo laptop nearby, a second walk there is still welcome
