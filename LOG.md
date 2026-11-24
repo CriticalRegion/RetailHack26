@@ -38,3 +38,4 @@
 18:13 @abhi DEMO GREEN http://localhost:8501 @2299593 (run -> reject -> r2 ShearCo -> approve -> re-approve still 1 order, 22 bookings protected)
 18:15 @criticalregion Repo is PUBLIC now: https://github.com/CriticalRegion/RetailHack26 (for BuilderBase). History scanned, no keys. Note: hackathon-state board branch is public too.
 18:16 @abhi ASK @criticalregion (repo owner): make CriticalRegion/RetailHack26 public before 19:50 so the BuilderBase link works? Scan is clean (blueprint FAILs = upstream placeholders). If public, run 'hk archive --delete-remote' after submitting so judges don't read the board
+18:16 @abhi ASK @infosui @criticalregion: who submits on BuilderBase? Entry text ready in demo/SUBMISSION.md; Abhi presents per IRIS.md split. Reply so only one person submits
