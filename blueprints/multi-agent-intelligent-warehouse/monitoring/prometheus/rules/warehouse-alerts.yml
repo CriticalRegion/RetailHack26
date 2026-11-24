@@ -1,0 +1,107 @@
+groups:
+  - name: maiw-api
+    rules:
+      - alert: APIDown
+        expr: up{job="warehouse-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MAIW API is down"
+          description: "Prometheus has not been able to scrape the MAIW API for more than 1 minute."
+
+      - alert: APIHighErrorRate
+        expr: sum(rate(http_requests_total{job="warehouse-api",status=~"5.."}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API error rate"
+          description: "The API is answering {{ $value }} 5xx responses per second."
+
+      - alert: APIHighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="warehouse-api",endpoint!="/api/v1/metrics"}[5m]))) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "95th percentile latency is {{ $value }} seconds."
+
+  - name: datastores
+    rules:
+      # pg_up / redis_up report the database itself; up{} only reports the exporter.
+      - alert: DatabaseDown
+        expr: pg_up == 0 or up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL (or its exporter) has been unreachable for more than 1 minute."
+
+      - alert: DatabaseHighConnections
+        expr: sum(pg_stat_database_numbackends) / max(pg_settings_max_connections) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connection usage is {{ $value | humanizePercentage }}."
+
+      - alert: RedisDown
+        expr: redis_up == 0 or up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis (or its exporter) has been unreachable for more than 1 minute."
+
+      # redis_memory_max_bytes is 0 when Redis has no maxmemory limit.
+      - alert: RedisHighMemoryUsage
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes > 0.9) and redis_memory_max_bytes > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value | humanizePercentage }} of maxmemory."
+
+      - alert: MilvusDown
+        expr: up{job="milvus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Milvus is down"
+          description: "Milvus has been unreachable for more than 1 minute."
+
+  - name: host
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}."
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}."
+
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} ({{ $labels.mountpoint }})."

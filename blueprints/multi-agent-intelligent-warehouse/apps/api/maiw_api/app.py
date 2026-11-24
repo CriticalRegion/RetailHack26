@@ -1,0 +1,352 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+"""
+Canonical MAIW FastAPI entrypoint — the ONLY release composition root.
+
+Entrypoint:
+    uvicorn maiw_api.app:app --host 0.0.0.0 --port 8001
+
+``src/api/app.py`` is a legacy development server and is not part of any
+release, deployment or qualification path.
+
+Router ownership and mutation policy (v2.0.1 — see maiw_api.route_policy and
+docs/audits/MAIW_V2.0.1_REMEDIATION_AUDIT.md for the full authority graph):
+
+    Canonical (this package)
+        health        GET only (/live, /ready, /health, /version)
+        equipment     GET + governed POST (X-Maiw-Operator-Token required —
+                      round 3 NEW3-P1-01 — then agent proposal →
+                      DecisionEngine → EquipmentActionExecutor only when
+                      APPROVED; 503 in profiles without governed writes)
+        executions    operator-authenticated journal + reconciliation of
+                      UNKNOWN writes, every profile (round 3 NEW3-P1-02)
+        operations    GET only in the shipped app (SQL task writes unmounted;
+                      GET /operations/workers is the worker roster)
+        safety        GET only in the shipped app (SQL incident writes unmounted)
+        mcp_status, runtime_status, world, model_lab, agent_tasks,
+        procedures    GET only
+        demo          simulation controls (MAIW_DEMO_MODE only) + governed
+                      approve/reject/reconcile
+        copilot       POST /turn — ACT goes through GovernedActionOrchestrator
+        inference     POST /api/v1/inference — bounded ModelGateway endpoint,
+                      fail-closed internal token, no governance below it
+
+    Legacy (src.api.routers) — mounted READ-ONLY unless listed
+        document                   read-only + POST /upload (bounded inference
+                                   via ModelGateway; document-workflow state)
+        inventory, wms, iot, erp, scanning, attendance, migration,
+        advanced_forecasting, training
+                                   GET/HEAD routes only
+
+    Not mounted in the shipped app (v2.0.1)
+        chat        legacy LLM agent → ToolDiscoveryService → direct SQL writes
+                    (audit P1-01); use POST /api/v1/copilot/turn
+        reasoning   legacy NIM client outside ModelGateway
+        src.api.routers.mcp (retired; replaced by mcp_status)
+        auth        removed (#261): the blueprint has no user login
+        document POST /approve|/reject — not implemented (no decision
+                    recorded, no WMS integration)
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import time
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from maiw_api.config import settings
+from maiw_api.lifespan import lifespan
+from maiw_api.origin_guard import CrossOriginWriteGuardMiddleware
+from maiw_api.request_size import RequestBodySizeLimitMiddleware
+from maiw_api.write_auth import TypedHTTPError
+
+# ── Canonical routers ─────────────────────────────────────────────────────────
+from maiw_api.routers.health import router as health_router
+from maiw_api.routers.equipment import router as equipment_router
+from maiw_api.routers.executions import router as executions_router
+from maiw_api.routers.operations import router as operations_router
+from maiw_api.routers.safety import router as safety_router
+from maiw_api.routers.mcp_status import router as mcp_status_router
+from maiw_api.routers.runtime_status import router as runtime_status_router
+from maiw_api.routers.demo import router as demo_router
+from maiw_api.routers.copilot import router as copilot_router
+from maiw_api.routers.world import router as world_router
+
+from maiw_api.routers.model_lab import router as model_lab_router
+from maiw_api.routers.agent_tasks import router as agent_tasks_router
+from maiw_api.routers.procedures import router as procedures_router
+from maiw_api.route_policy import curated_view, read_only_view
+
+# Bounded sandbox inference endpoint (one implementation, shared with the
+# legacy dev server): POST /api/v1/inference → canonical ModelGateway.
+from src.api.routers.inference import router as inference_router
+
+# ── Legacy routers (mounted through route_policy views only) ─────────────────
+from src.api.routers.inventory import router as inventory_router
+from src.api.routers.wms import router as wms_router
+from src.api.routers.iot import router as iot_router
+from src.api.routers.erp import router as erp_router
+from src.api.routers.scanning import router as scanning_router
+from src.api.routers.attendance import router as attendance_router
+from src.api.routers.migration import router as migration_router
+from src.api.routers.document import router as document_router
+from src.api.routers.advanced_forecasting import router as forecasting_router
+from src.api.routers.training import router as training_router
+
+# ── Shared middleware / monitoring (from src, no migration needed) ─────────────
+from src.api.middleware.security_headers import SecurityHeadersMiddleware
+from src.api.services.monitoring.metrics import record_request_metrics
+from src.api.services.security.rate_limiter import (
+    FAIL_CLOSED,
+    RateLimiterUnavailable,
+    get_rate_limiter,
+    resolve_fail_mode,
+)
+from src.api.utils.log_utils import install_log_injection_guard
+from src.api.utils.error_handler import (
+    handle_generic_exception,
+    handle_http_exception,
+    handle_validation_error,
+)
+
+logger = logging.getLogger(__name__)
+
+# Every log message in the API process is a single line: request values that
+# reach log calls cannot forge entries (CWE-117). See install_log_injection_guard.
+install_log_injection_guard()
+
+
+def _safe_int_env(key: str, default: int) -> int:
+    value = os.getenv(key, str(default)).split("#")[0].strip()
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+_MAX_REQUEST_SIZE = _safe_int_env("MAX_REQUEST_SIZE", 10_485_760)  # 10 MB
+_MAX_UPLOAD_SIZE = _safe_int_env("MAX_UPLOAD_SIZE", 52_428_800)  # 50 MB
+
+# ── Application ───────────────────────────────────────────────────────────────
+
+app = FastAPI(
+    title=settings.app_title,
+    version=settings.app_version,
+    description=settings.app_description,
+    lifespan=lifespan,
+    # No ``max_request_size`` here: FastAPI never had that parameter (it was
+    # silently swallowed by ``**extra`` up to 0.143 and is a TypeError since
+    # 0.162).  Body size is enforced by RequestBodySizeLimitMiddleware below.
+)
+
+# ── Exception handlers ────────────────────────────────────────────────────────
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return await handle_validation_error(request, exc)
+
+
+@app.exception_handler(TypedHTTPError)
+async def typed_http_error_handler(request: Request, exc: TypedHTTPError):
+    # v2.0.1 round 3: typed, unsanitised errors (operator write auth denials,
+    # RECONCILIATION_REQUIRED) — the generic handler hides 5xx messages, which
+    # would hide OPERATOR_WRITE_AUTH_NOT_CONFIGURED.
+    return JSONResponse(status_code=exc.status_code, content=exc.as_body())
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return await handle_http_exception(request, exc)
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    return await handle_generic_exception(request, exc)
+
+
+# ── Middleware ────────────────────────────────────────────────────────────────
+# Order matters: Starlette makes the LAST middleware added the OUTERMOST.
+# Resulting order, outermost first:
+#   CORS → security headers → metrics → request size → rate limit
+#   → origin guard → routes
+# CORS and security headers are added last (below the metrics middleware) so
+# every response, including the 403/413/429 the other middleware answer
+# itself, carries the security headers, and an allowed origin can read it.
+# CORS is the very last (SonarQube python:S8414): it answers preflights
+# itself, so those bodiless OPTIONS responses carry no security headers.
+
+_cors_origins = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3001,http://localhost:3000,"
+        "http://127.0.0.1:3001,http://127.0.0.1:3000",
+    ).split(",")
+    if o.strip()
+]
+# CORS only stops other origins reading responses; a browser still sends their
+# simple POSTs (multipart, text/plain, no Content-Type). Refuse state-changing
+# requests whose Origin is not one of the same browser origins — see
+# maiw_api.origin_guard.
+app.add_middleware(CrossOriginWriteGuardMiddleware, allowed_origins=_cors_origins)
+
+_RATE_LIMIT_SKIP = frozenset(
+    {
+        "/health",
+        "/api/v1/health",
+        "/api/v1/health/simple",
+        "/api/v1/metrics",
+        "/docs",
+        "/openapi.json",
+        "/",
+    }
+)
+
+
+def _rate_limiter_unavailable(exc: RateLimiterUnavailable) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content=exc.as_body())
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path not in _RATE_LIMIT_SKIP:
+        try:
+            limiter = await get_rate_limiter()
+            await limiter.check_rate_limit(request)
+        except RateLimiterUnavailable as exc:
+            # RATE_LIMIT_FAIL_MODE=closed and the limiter could not decide.
+            return _rate_limiter_unavailable(exc)
+        except HTTPException as exc:
+            # v2.0.1 round 4 (P2-04): answer the limiter's 429 here.  An
+            # exception raised from an HTTP middleware bypasses FastAPI's
+            # exception handlers and would surface as a 500.
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
+                headers=getattr(exc, "headers", None) or None,
+            )
+        except Exception as exc:
+            # The limiter could not even be obtained: same fail-mode policy.
+            logger.error("Rate limiting error: %s", exc)
+            if resolve_fail_mode() == FAIL_CLOSED:
+                return _rate_limiter_unavailable(RateLimiterUnavailable())
+    return await call_next(request)
+
+
+# Request body size: a pure ASGI middleware that counts the bytes actually
+# received (chunked/streamed bodies included) and answers 413 itself — see
+# maiw_api.request_size.  Registered here to keep its place in the stack
+# (inside metrics, outside the rate limiter).
+app.add_middleware(
+    RequestBodySizeLimitMiddleware,
+    max_request_size=_MAX_REQUEST_SIZE,
+    max_upload_size=_MAX_UPLOAD_SIZE,
+)
+
+
+# Mutated in place (no `global` rebinding): set once the first failure is logged.
+_metrics_failure_state = {"logged": False}
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration = time.perf_counter() - start
+    try:
+        record_request_metrics(request, response, duration)
+    except Exception:
+        # Never fail the request over instrumentation, but don't hide it:
+        # log the first failure with its traceback, later ones at debug.
+        if not _metrics_failure_state["logged"]:
+            _metrics_failure_state["logged"] = True
+            logger.warning("HTTP request metrics not recorded", exc_info=True)
+        else:
+            logger.debug("HTTP request metrics not recorded", exc_info=True)
+    return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
+)
+
+
+# ── Routers ───────────────────────────────────────────────────────────────────
+
+# Canonical routers
+app.include_router(health_router)
+app.include_router(equipment_router)
+app.include_router(executions_router)
+# operations / safety: the SQL task/incident writes have no governed path, so
+# only their read routes ship (v2.0.1, audit P1-01 / §29).
+app.include_router(read_only_view(operations_router))
+app.include_router(read_only_view(safety_router))
+app.include_router(mcp_status_router)
+app.include_router(runtime_status_router)
+app.include_router(demo_router)
+app.include_router(copilot_router)
+app.include_router(world_router)
+
+app.include_router(model_lab_router)
+app.include_router(agent_tasks_router)
+app.include_router(procedures_router)
+
+# Bounded inference boundary (v2.0.1, audit P1-02)
+app.include_router(inference_router)
+
+# Legacy — document workflow. Upload runs model inference only through
+# ModelGateway (audit P1-05). /search, /validate and /analytics returned
+# fabricated data and are not shipped. /approve and /reject are not shipped
+# either: nothing records the decision or integrates with a WMS, so they
+# returned "approved"/"rejected" for any document ID, from any caller.
+app.include_router(
+    curated_view(
+        document_router,
+        allow_mutations={
+            ("POST", "/api/v1/document/upload"),
+        },
+    )
+)
+
+# Legacy — read-only. Every POST/PUT/PATCH/DELETE route of these routers
+# (inventory/WMS/IoT/ERP/scanner/attendance writes, DB migrate/rollback,
+# forecasting batch jobs, training subprocess start) is NOT mounted.
+for _legacy_router in (
+    inventory_router,
+    wms_router,
+    iot_router,
+    erp_router,
+    scanning_router,
+    attendance_router,
+    migration_router,
+    forecasting_router,
+    training_router,
+):
+    app.include_router(read_only_view(_legacy_router))
+
+# NOT mounted (v2.0.1): src.api.routers.chat (P1-01 ungoverned write path),
+# src.api.routers.reasoning (direct NIM client outside ModelGateway).
+
+
+@app.get("/")
+async def root():
+    return {
+        "service": settings.app_title,
+        "version": settings.app_version,
+        "pipeline": "STATE → REASON → PROPOSE → DECIDE → EXECUTE → MCP → BACKEND",
+        "docs": "/docs",
+        "health": "/api/v1/health",
+    }

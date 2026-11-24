@@ -1,0 +1,45 @@
+# Configuration file for catalog-enrichment endpoints
+
+
+vlm:
+  url: "http://nim-vlm:8000/v1"
+  model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+
+llm:
+  url: "http://nim-llm:8000/v1"
+  model: "nvidia/nemotron-3.5-lightning"
+
+flux:
+  url: "http://nim-flux:8000/v1/infer"
+
+trellis:
+  url: "http://nim-trellis:8000/v1/infer"
+
+embeddings:
+  url: "http://embedqa:8000/v1"
+  model: "nvidia/nv-embedqa-e5-v5"
+
+milvus:
+  host: "milvus-standalone"
+  port: 19530
+  collection: "policy_chunks"
+  alias: "policy_library"
+
+policy_library:
+  storage_dir: "data/policies"
+  db_path: "data/policies/library.db"
+  top_k: 8
+  min_relevance_score: 0.3
+
+product_manual:
+  chunk_size_words: 250
+  chunk_overlap_words: 50
+  top_k_per_query: 3
+  min_relevance_score: 0.25
+
+web_insights:
+  max_results: 8
+  max_sources: 8
+  min_sources: 2
+  search_type: "auto"
+  highlights_max_characters: 4000

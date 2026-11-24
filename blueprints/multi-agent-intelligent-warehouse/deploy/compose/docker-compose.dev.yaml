@@ -1,0 +1,354 @@
+version: "3.9"
+# Published ports bind to 127.0.0.1 (Docker otherwise binds them on every
+# host interface).  Datastores, the MCP domain servers and the local NIM are
+# loopback-only with no override: the MCP write tools trust the decision IDs
+# their caller sends, so only the backend (over the Compose network) may
+# reach them.  The operator-facing entry points (nginx 3000, frontend 3001,
+# API 8001) follow MAIW_PUBLISH_ADDRESS (default 127.0.0.1); widen it only
+# behind your own authentication and TLS.
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.15.2-pg16
+    container_name: wosa-timescaledb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: ["127.0.0.1:5435:5432"]
+    volumes:
+      - ./data/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: wosa-redis
+    ports: ["127.0.0.1:6379:6379"]
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: wosa-kafka
+    user: root
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_LOG_DIRS=/tmp/kraft-combined-logs
+      - CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
+    ports: ["127.0.0.1:9092:9092"]
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    command:
+      - sh
+      - -c
+      - |
+        chmod 777 /tmp/kraft-combined-logs || true
+        if [ ! -f /tmp/kraft-combined-logs/.formatted ]; then
+          /opt/kafka/bin/kafka-storage.sh format -t $${CLUSTER_ID} -c /opt/kafka/config/kraft/server.properties
+          touch /tmp/kraft-combined-logs/.formatted
+        fi
+        exec /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.9
+    container_name: wosa-etcd
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_HEARTBEAT_INTERVAL=500
+      - ETCD_ELECTION_TIMEOUT=2500
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+    ports: ["127.0.0.1:2379:2379"]
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+    container_name: wosa-minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    ports: ["127.0.0.1:9000:9000","127.0.0.1:9001:9001"]
+
+  milvus:
+    image: milvusdb/milvus:v2.4.3
+    container_name: wosa-milvus
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_USE_SSL: "false"
+    ports:
+      - "127.0.0.1:19530:19530"   # gRPC
+      - "127.0.0.1:9091:9091"     # HTTP
+    depends_on: [etcd, minio]
+
+  # Backend API Service
+  backend:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.backend
+      # Build identity for /api/v1/version; scripts/setup/dev_up.sh exports
+      # both from git.  Unset, the API reports 0.0.0+unknown.
+      args:
+        MAIW_BUILD_DESCRIBE: ${MAIW_BUILD_DESCRIBE:-}
+        GIT_SHA: ${GIT_SHA:-unknown}
+    container_name: wosa-backend
+    ports:
+      - "${MAIW_PUBLISH_ADDRESS:-127.0.0.1}:8001:8001"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      # The SQL data path and /api/v1/ready connect via PGHOST/PGPORT
+      # (default localhost:5435, which is not reachable inside the container).
+      - PGHOST=timescaledb
+      - PGPORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - ENVIRONMENT=development
+      # MCP domain servers (below).  Governed writes stay off unless the
+      # deployment opts in: MAIW_DEPLOYMENT_PROFILE=reference_governed plus a
+      # MAIW_OPERATOR_WRITE_TOKEN (>= 32 chars) in deploy/compose/.env.
+      - MAIW_MCP_SERVER_INVENTORY_URL=http://mcp-inventory:8765/mcp
+      - MAIW_MCP_SERVER_EQUIPMENT_URL=http://mcp-equipment:8766/mcp
+      - MAIW_MCP_SERVER_LABOR_URL=http://mcp-labor:8767/mcp
+      - MAIW_MCP_SERVER_WAVE_URL=http://mcp-wave:8768/mcp
+      - MAIW_DEPLOYMENT_PROFILE=${MAIW_DEPLOYMENT_PROFILE:-reference}
+      - MAIW_OPERATOR_WRITE_TOKEN=${MAIW_OPERATOR_WRITE_TOKEN:-}
+    volumes:
+      # Durable procedure + governance state (MAIW_PERSISTENCE_ROOT default).
+      - maiw_state:/var/lib/maiw
+    depends_on:
+      - timescaledb
+      - redis
+      - milvus
+      - kafka
+      - mcp-inventory
+      - mcp-equipment
+      - mcp-labor
+      - mcp-wave
+    restart: unless-stopped
+    healthcheck:
+      # The backend image ships no curl; use the Python stdlib.
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/api/v1/health', timeout=10).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service (production build served by non-root nginx; see
+  # Dockerfile.frontend). nginx listens on 8080 in the container and proxies
+  # /api to MAIW_API_UPSTREAM. For hot reload, run `npm start` in src/ui/web
+  # on the host instead.
+  frontend:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.frontend
+    container_name: wosa-frontend
+    ports:
+      - "${MAIW_PUBLISH_ADDRESS:-127.0.0.1}:3001:8080"
+    environment:
+      - MAIW_API_UPSTREAM=http://backend:8001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:1.25.3-alpine
+    container_name: wosa-nginx
+    ports:
+      - "${MAIW_PUBLISH_ADDRESS:-127.0.0.1}:3000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  # ── MCP Domain Servers (stateless streamable-http, no sticky sessions) ─────────
+
+  mcp-inventory:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.mcp
+      args:
+        MCP_DOMAIN: inventory
+    container_name: wosa-mcp-inventory
+    ports:
+      - "127.0.0.1:${MAIW_MCP_INVENTORY_PORT:-8765}:8765"
+    environment:
+      - MAIW_MCP_TRANSPORT=streamable-http
+      - MAIW_MCP_INVENTORY_PORT=8765
+      - MAIW_MCP_INVENTORY_HOST=0.0.0.0
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - PGHOST=timescaledb
+      - PGPORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    depends_on:
+      - timescaledb
+    restart: unless-stopped
+    healthcheck:
+      # MCP initialize over streamable HTTP; the server has no /health route
+      test: ["CMD", "python", "-c", "import json, urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8765/mcp', data=json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'healthcheck', 'version': '1'}}}).encode(), headers={'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream'}), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  mcp-equipment:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.mcp
+      args:
+        MCP_DOMAIN: equipment
+    container_name: wosa-mcp-equipment
+    ports:
+      - "127.0.0.1:${MAIW_MCP_EQUIPMENT_PORT:-8766}:8766"
+    environment:
+      - MAIW_MCP_TRANSPORT=streamable-http
+      - MAIW_MCP_EQUIPMENT_PORT=8766
+      - MAIW_MCP_EQUIPMENT_HOST=0.0.0.0
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - PGHOST=timescaledb
+      - PGPORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    depends_on:
+      - timescaledb
+    restart: unless-stopped
+    healthcheck:
+      # MCP initialize over streamable HTTP; the server has no /health route
+      test: ["CMD", "python", "-c", "import json, urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8766/mcp', data=json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'healthcheck', 'version': '1'}}}).encode(), headers={'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream'}), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  mcp-labor:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.mcp
+      args:
+        MCP_DOMAIN: labor
+    container_name: wosa-mcp-labor
+    ports:
+      - "127.0.0.1:${MAIW_MCP_LABOR_PORT:-8767}:8767"
+    environment:
+      - MAIW_MCP_TRANSPORT=streamable-http
+      - MAIW_MCP_LABOR_PORT=8767
+      - MAIW_MCP_LABOR_HOST=0.0.0.0
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - PGHOST=timescaledb
+      - PGPORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    depends_on:
+      - timescaledb
+    restart: unless-stopped
+    healthcheck:
+      # MCP initialize over streamable HTTP; the server has no /health route
+      test: ["CMD", "python", "-c", "import json, urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8767/mcp', data=json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'healthcheck', 'version': '1'}}}).encode(), headers={'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream'}), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  mcp-wave:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.mcp
+      args:
+        MCP_DOMAIN: wave
+    container_name: wosa-mcp-wave
+    ports:
+      - "127.0.0.1:${MAIW_MCP_WAVE_PORT:-8768}:8768"
+    environment:
+      - MAIW_MCP_TRANSPORT=streamable-http
+      - MAIW_MCP_WAVE_PORT=8768
+      - MAIW_MCP_WAVE_HOST=0.0.0.0
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - PGHOST=timescaledb
+      - PGPORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    depends_on:
+      - timescaledb
+    restart: unless-stopped
+    healthcheck:
+      # MCP initialize over streamable HTTP; the server has no /health route
+      test: ["CMD", "python", "-c", "import json, urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8768/mcp', data=json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'healthcheck', 'version': '1'}}}).encode(), headers={'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream'}), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  llm-nim:
+    image: nvcr.io/nim/nvidia/nemotron-3-super-120b-a12b:latest
+    container_name: wosa-llm-nim
+    profiles:
+      - gpu
+    ports:
+      - "127.0.0.1:${LLM_NIM_PORT:-8000}:8000"
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      - NGC_API_KEY=${NVIDIA_API_KEY:-}
+      - CUDA_VISIBLE_DEVICES=0,1,2,3
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids:
+                - "0"
+                - "1"
+                - "2"
+                - "3"
+              capabilities: [gpu]
+    shm_size: '2gb'
+    volumes:
+      - nim_cache:/root/.cache
+      - nim_models:/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+volumes:
+  kafka_data:
+  maiw_state:
+  nim_cache:
+  nim_models:

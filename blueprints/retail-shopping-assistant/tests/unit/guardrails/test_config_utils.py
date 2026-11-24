@@ -1,0 +1,144 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+"""Unit tests for ``guardrails.src.config_utils``."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Dict, List
+
+import pytest
+import yaml
+from guardrails.src.config_utils import apply_model_config
+
+
+def _make_config(model_entries: List[Dict[str, Any]]) -> SimpleNamespace:
+    models = [
+        SimpleNamespace(
+            type=entry["type"],
+            model=entry.get("model", "old-model"),
+            parameters=dict(entry.get("parameters", {})),
+        )
+        for entry in model_entries
+    ]
+    return SimpleNamespace(models=models)
+
+
+_ENDPOINT_ENV = {
+    "LLM_BASE_URL": "https://llm.example/v1",
+    "LLM_MODEL": "llm-model",
+    "RAILS_CONTENT_BASE_URL": "https://content.example/v1",
+    "RAILS_CONTENT_MODEL": "content-model",
+    "RAILS_TOPIC_BASE_URL": "https://topic.example/v1",
+    "RAILS_TOPIC_MODEL": "topic-model",
+}
+
+
+@pytest.fixture(autouse=True)
+def _endpoint_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key, value in _ENDPOINT_ENV.items():
+        monkeypatch.setenv(key, value)
+
+
+def _write_model_config(root: Path) -> Path:
+    config_root = root / "configs"
+    rails_dir = config_root / "rails"
+    rails_dir.mkdir(parents=True)
+    (config_root / "models.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "local_models": {"required_env": [], "services": {}},
+                "models": {
+                    "app_llm": {
+                        "source": "endpoint",
+                        "base_url_env": "LLM_BASE_URL",
+                        "model_env": "LLM_MODEL",
+                        "api_key_env": None,
+                    },
+                    "content_safety": {
+                        "source": "endpoint",
+                        "base_url_env": "RAILS_CONTENT_BASE_URL",
+                        "model_env": "RAILS_CONTENT_MODEL",
+                        "api_key_env": "RAIL_API_KEY",
+                    },
+                    "topic_control": {
+                        "source": "endpoint",
+                        "base_url_env": "RAILS_TOPIC_BASE_URL",
+                        "model_env": "RAILS_TOPIC_MODEL",
+                        "api_key_env": "RAIL_API_KEY",
+                    },
+                },
+            }
+        )
+    )
+    return rails_dir
+
+
+class TestApplyModelConfig:
+    def test_model_config_updates_guardrails_models(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rails_dir = _write_model_config(tmp_path)
+        monkeypatch.setenv("SHARED_CONFIG_ROOT", str(rails_dir.parent))
+        monkeypatch.setenv("RAIL_API_KEY", "secret-value")
+        config = _make_config(
+            [
+                {"type": "main", "parameters": {"base_url": "http://old-main"}},
+                {"type": "content_safety", "parameters": {"base_url": "http://old-content"}},
+                {"type": "topic_control", "parameters": {"base_url": "http://old-topic"}},
+            ]
+        )
+
+        apply_model_config(config, config_dir=str(rails_dir))
+
+        assert config.models[0].model == "llm-model"
+        assert config.models[0].parameters["base_url"] == "https://llm.example/v1"
+        assert config.models[1].model == "content-model"
+        assert config.models[1].parameters["base_url"] == "https://content.example/v1"
+        assert config.models[2].model == "topic-model"
+        assert config.models[2].parameters["base_url"] == "https://topic.example/v1"
+        assert config.models[1].api_key_env_var == "RAIL_API_KEY"
+        assert config.models[2].api_key_env_var == "RAIL_API_KEY"
+
+    def test_main_and_guard_models_keep_their_own_keys(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rails_dir = _write_model_config(tmp_path)
+        models_yaml = rails_dir.parent / "models.yaml"
+        data = yaml.safe_load(models_yaml.read_text())
+        data["models"]["app_llm"]["api_key_env"] = "LLM_API_KEY"
+        models_yaml.write_text(yaml.safe_dump(data))
+        monkeypatch.setenv("SHARED_CONFIG_ROOT", str(rails_dir.parent))
+        monkeypatch.setenv("LLM_API_KEY", "app-key")
+        monkeypatch.setenv("RAIL_API_KEY", "rail-key")
+        monkeypatch.setenv("NVIDIA_API_KEY", "untouched")
+        config = _make_config(
+            [{"type": "main"}, {"type": "content_safety"}, {"type": "topic_control"}]
+        )
+
+        apply_model_config(config, config_dir=str(rails_dir))
+
+        assert [m.api_key_env_var for m in config.models] == [
+            "LLM_API_KEY",
+            "RAIL_API_KEY",
+            "RAIL_API_KEY",
+        ]
+        assert os.environ["NVIDIA_API_KEY"] == "untouched"
+
+    def test_unrelated_model_type_is_ignored(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rails_dir = _write_model_config(tmp_path)
+        monkeypatch.setenv("SHARED_CONFIG_ROOT", str(rails_dir.parent))
+        config = _make_config(
+            [{"type": "unrelated", "model": "old", "parameters": {"base_url": "http://old"}}]
+        )
+
+        apply_model_config(config, config_dir=str(rails_dir))
+
+        assert config.models[0].model == "old"
+        assert config.models[0].parameters["base_url"] == "http://old"

@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+"""
+Physical model configuration check shared by preflight, smoke and status
+(v2.0.1 round 2, audit NEW-P1-01 §11/§12).
+
+It builds the SAME ``maiw_models.ModelRegistry`` the shipped app builds — from
+the same environment variables (``NEMOTRON_<ROLE>_MODEL`` /
+``NEMOTRON_<ROLE>_ENABLED``) — and asks the SAME ``DeploymentResolver`` the
+gateway uses before dispatch whether every enabled role is bound to an
+approved physical deployment.  There is no duplicate shell logic and no check
+of a variable the runtime does not dispatch.
+
+Usage:
+    python scripts/lib/check_model_config.py              # human-readable
+    python scripts/lib/check_model_config.py --json       # machine-readable
+    python scripts/lib/check_model_config.py --expect ROLE MODEL_ID
+        exit 0 only if MODEL_ID is the approved physical deployment for ROLE
+        (used by the smoke test on the model the running app reports)
+    python scripts/lib/check_model_config.py --provider-probe
+        additionally GET {provider}/models (credential from the environment,
+        never printed) and report whether each enabled model is listed, then
+        send each enabled model one minimal chat completion and FAIL unless it
+        answers HTTP 200 as that model.  The listing alone is not enough: the
+        hosted catalogue kept listing Nemotron 3 Super after its 2026-10-19
+        retirement while every completion returned HTTP 404.
+        A rate limit (429) or a provider-side error (500/502/503/504) says
+        "try again later", not "this model is not served": the completion is
+        retried (honouring Retry-After, capped), and if it still does not
+        answer the role is reported WARN "could not verify" without failing
+        the check.  A 4xx answer, a 200 from a different model, or no answer
+        at all (network error, timeout) is still a FAIL.
+
+Exit codes: 0 = every enabled role approved; 1 = violation; 2 = usage/import.
+No secret value is ever printed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+
+# HTTP statuses that mean "try again later", not "this model is not served".
+_TRANSIENT_HTTP = frozenset({429, 500, 502, 503, 504})
+_TRANSIENT_RETRIES = 2  # further attempts after a transient answer
+_BACKOFF_SECONDS = (2.0, 5.0)
+_MAX_RETRY_AFTER_SECONDS = 10.0
+
+
+def _registry():
+    from maiw_models import ModelRegistry
+
+    return ModelRegistry()
+
+
+def _bindings(registry) -> list[dict]:
+    rows = []
+    for role in registry.all_roles():
+        cap = registry.get_by_role(role)
+        model_id = registry._role_index.get(role)  # noqa: SLF001 - raw binding
+        enabled = bool(cap is not None and cap.enabled)
+        problem = registry.resolver.violation(role, model_id)
+        rows.append(
+            {
+                "role": role,
+                "model_id": model_id,
+                "enabled": enabled,
+                "generation": registry.resolver.generation_for(model_id or "")
+                or "unapproved",
+                "approved": problem is None,
+                "reason": problem[0] if problem else None,
+            }
+        )
+    return rows
+
+
+def _selector_findings(resolver) -> list[dict]:
+    """Other model selectors: report whether runtime dispatches them."""
+    findings = []
+    for var in ("LLM_MODEL", "MAIW_NIM_MODEL"):
+        value = os.getenv(var)
+        if value is None or value == "":
+            continue
+        approved = value in resolver.approved_model_ids()
+        findings.append(
+            {
+                "variable": var,
+                "value": value,
+                "dispatched_by_gateway": False,
+                "approved_model_id": approved,
+            }
+        )
+    return findings
+
+
+def _provider_probe(rows: list[dict]) -> dict:
+    import urllib.error
+    import urllib.request
+
+    base = (
+        os.getenv("MAIW_NIM_BASE_URL")
+        or os.getenv("LLM_NIM_URL")
+        or "https://integrate.api.nvidia.com/v1"
+    ).rstrip("/")
+    key = os.getenv("MAIW_NIM_API_KEY") or os.getenv("NVIDIA_API_KEY") or ""
+    req = urllib.request.Request(f"{base}/models")
+    if key:
+        req.add_header("Authorization", f"Bearer {key}")
+    out: dict = {"provider_base_url": base}
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read() or b"{}")
+        listed = {m.get("id") for m in data.get("data", []) if isinstance(m, dict)}
+        out["reachable"] = True
+        out["listed"] = {
+            r["role"]: (r["model_id"] in listed) for r in rows if r["enabled"]
+        }
+    except urllib.error.HTTPError as exc:
+        out["reachable"] = False
+        out["error"] = f"HTTP {exc.code}"
+        out["answered"] = True
+    except Exception as exc:  # noqa: BLE001
+        out["reachable"] = False
+        out["error"] = type(exc).__name__
+        out["answered"] = False
+    out["dispatch"] = _dispatch_probe(base, key, rows) if key else None
+    return out
+
+
+def _retry_delay(attempt: int, retry_after: str | None) -> float:
+    """Seconds to wait before retry *attempt* (0-based): Retry-After, capped."""
+    try:
+        seconds = float(retry_after)  # an HTTP-date is not honoured
+    except (TypeError, ValueError):
+        seconds = _BACKOFF_SECONDS[min(attempt, len(_BACKOFF_SECONDS) - 1)]
+    return max(0.0, min(seconds, _MAX_RETRY_AFTER_SECONDS))
+
+
+def _verdict(status, reported, model_id: str) -> str:
+    """served | unverified (429/5xx: try later) | refused (401/403) | no_answer | not_served."""
+    if status == 200 and reported == model_id:
+        return "served"
+    if status in _TRANSIENT_HTTP:
+        return "unverified"
+    if status in (401, 403):
+        return "refused"
+    if not isinstance(status, int):
+        return "no_answer"
+    return "not_served"
+
+
+def _dispatch_probe(base: str, key: str, rows: list[dict]) -> dict:
+    """One minimal chat completion per enabled, approved role.
+
+    Returns {role: {"ok", "verdict", "http", "reported", "attempts"}}.  Only
+    the status code and the provider-reported model are kept; the key is sent
+    as a header, never printed.  A transient answer (_TRANSIENT_HTTP) is
+    retried up to _TRANSIENT_RETRIES times before it is reported "unverified".
+    """
+    import urllib.error
+    import urllib.request
+
+    results: dict = {}
+    for r in rows:
+        if not (r["enabled"] and r["approved"]):
+            continue
+        body = json.dumps(
+            {
+                "model": r["model_id"],
+                "messages": [{"role": "user", "content": "Reply with OK."}],
+                "max_tokens": 16,
+            }
+        ).encode()
+        req = urllib.request.Request(
+            f"{base}/chat/completions",
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+            },
+        )
+        attempts = 0
+        while True:
+            attempts += 1
+            retry_after = None
+            try:
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    status = resp.status
+                    raw = resp.read()
+                try:
+                    reported = json.loads(raw or b"{}").get("model")
+                except (ValueError, AttributeError):
+                    reported = None  # a 200 that is not a completion
+            except urllib.error.HTTPError as exc:
+                status, reported = exc.code, None
+                retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            except Exception as exc:  # noqa: BLE001
+                status, reported = type(exc).__name__, None
+            if status in _TRANSIENT_HTTP and attempts <= _TRANSIENT_RETRIES:
+                time.sleep(_retry_delay(attempts - 1, retry_after))
+                continue
+            break
+        verdict = _verdict(status, reported, r["model_id"])
+        results[r["role"]] = {
+            "ok": verdict == "served",
+            "verdict": verdict,
+            "http": status,
+            "reported": reported,
+            "attempts": attempts,
+        }
+    return results
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--expect", nargs=2, metavar=("ROLE", "MODEL_ID"))
+    parser.add_argument("--provider-probe", action="store_true")
+    args = parser.parse_args()
+
+    import logging
+
+    logging.disable(logging.CRITICAL)  # registry logs; this tool prints its own
+    try:
+        from maiw_models import default_resolver
+    except Exception as exc:  # noqa: BLE001
+        print(f"FAIL  cannot import maiw_models: {exc}", file=sys.stderr)
+        return 2
+
+    if args.expect:
+        role, model_id = args.expect
+        problem = default_resolver().violation(role, model_id)
+        generation = default_resolver().generation_for(model_id) or "unapproved"
+        result = {
+            "role": role,
+            "model_id": model_id,
+            "generation": generation,
+            "approved": problem is None,
+            "reason": problem[0] if problem else None,
+        }
+        if args.json:
+            print(json.dumps(result))
+        else:
+            verdict = "PASS" if problem is None else "FAIL"
+            print(
+                f"{verdict}  role={role} model={model_id} generation={generation}"
+                + (f" reason={problem[0]}" if problem else " approved")
+            )
+        return 0 if problem is None else 1
+
+    registry = _registry()
+    rows = _bindings(registry)
+    selectors = _selector_findings(registry.resolver)
+    enabled = [r for r in rows if r["enabled"]]
+    violations = [r for r in enabled if not r["approved"]]
+    bad_selectors = [s for s in selectors if not s["approved_model_id"]]
+    report = {
+        "bindings": rows,
+        "enabled_roles": [r["role"] for r in enabled],
+        "violations": violations,
+        "other_selectors": selectors,
+        "approved": not violations and not bad_selectors and bool(enabled),
+    }
+    if args.provider_probe:
+        report["provider"] = _provider_probe(rows)
+        dispatch = report["provider"].get("dispatch") or {}
+        # "unverified" (rate limit / provider error after retries) is a
+        # warning: nothing shows the configuration is wrong.
+        if any(d["verdict"] not in ("served", "unverified") for d in dispatch.values()):
+            report["approved"] = False
+
+    if args.json:
+        print(json.dumps(report, indent=1))
+    else:
+        for r in rows:
+            state = "enabled " if r["enabled"] else "disabled"
+            if not r["enabled"]:
+                verdict = "INFO"
+            else:
+                verdict = "PASS" if r["approved"] else "FAIL"
+            print(
+                f"{verdict}  role={r['role']:<10} {state} model={r['model_id']} "
+                f"generation={r['generation']}"
+                + (f" reason={r['reason']}" if r["reason"] and r["enabled"] else "")
+            )
+        for s in selectors:
+            verdict = "PASS" if s["approved_model_id"] else "FAIL"
+            print(
+                f"{verdict}  {s['variable']}={s['value']} (not dispatched by "
+                f"ModelGateway; must still name an approved model)"
+            )
+        if not enabled:
+            print("FAIL  no model role is enabled")
+        if args.provider_probe:
+            p = report["provider"]
+            if p.get("reachable"):
+                for role, ok in p.get("listed", {}).items():
+                    print(
+                        f"{'PASS' if ok else 'WARN'}  provider lists {role} model"
+                        + ("" if ok else " (not listed — the provider may not serve it)")
+                    )
+            elif p.get("answered"):
+                print(f"WARN  provider model list unavailable ({p.get('error')})")
+            else:
+                print(f"WARN  provider not reachable ({p.get('error')})")
+            dispatch = p.get("dispatch")
+            if dispatch is None:
+                print("WARN  provider dispatch not probed (no API key in the environment)")
+            for role, d in (dispatch or {}).items():
+                enable_var = f"NEMOTRON_{role.upper().replace('-', '_')}_ENABLED"
+                verdict = d["verdict"]
+                if verdict == "served":
+                    print(f"PASS  provider serves {role} model (HTTP 200, reported {d['reported']})")
+                elif verdict == "unverified":
+                    reason = "rate limited" if d["http"] == 429 else "provider error"
+                    print(
+                        f"WARN  provider could not verify {role} model (HTTP {d['http']}, "
+                        f"{reason}, {d['attempts']} attempts) — retry later; this is not "
+                        "a configuration error"
+                    )
+                elif verdict == "refused":
+                    print(
+                        f"FAIL  provider refused the API key for {role} model "
+                        f"(HTTP {d['http']}) — check MAIW_NIM_API_KEY / NVIDIA_API_KEY, or "
+                        f"disable the role ({enable_var}=false) if this key may not use "
+                        "that model"
+                    )
+                elif verdict == "no_answer":
+                    print(
+                        f"FAIL  provider did not answer for {role} model ({d['http']}) — "
+                        "check MAIW_NIM_BASE_URL and network access to the provider"
+                    )
+                else:
+                    print(
+                        f"FAIL  provider does not serve {role} model "
+                        f"(HTTP {d['http']}, reported {d['reported']}) — disable the role "
+                        f"({enable_var}=false) or point "
+                        "it at a deployment that serves the approved model"
+                    )
+    return 0 if report["approved"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

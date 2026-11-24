@@ -1,0 +1,204 @@
+import React, { useState } from 'react';
+import { Box, Typography, Button } from '@mui/material';
+import { demoAPI, InjectEventType } from '../../services/demoAPI';
+import { describeInjectError, describeInjectTarget } from '../demo/injectFeedback';
+
+interface FaultProfile {
+  id: string;
+  name: string;
+  desc: string;
+  safetyBehavior: string;
+  injectEventType: InjectEventType | null;
+  injectPayload?: Record<string, any>;
+  /** Ends the fault; offered as RESTORE once the fault was injected. */
+  restoreEventType?: InjectEventType;
+  restorePayload?: Record<string, unknown>;
+}
+
+const PROFILES: FaultProfile[] = [
+  {
+    id: 'F01',
+    name: 'NIM TIMEOUT',
+    desc: 'Model provider times out — no proposal produced',
+    safetyBehavior: 'ModelTimeout raised. Unauthorized writes: 0.',
+    injectEventType: null, // test-infrastructure only
+  },
+  {
+    id: 'F06',
+    name: 'AMBIGUOUS WRITE',
+    desc: 'MCP mutation sent, ACK lost — UNKNOWN outcome, no retry',
+    safetyBehavior: 'UNKNOWN → reconcile → CONFIRMED_EXECUTED. False successes: 0.',
+    injectEventType: null, // test-infrastructure only
+  },
+  {
+    id: 'F08',
+    name: 'DUPLICATE EXECUTION',
+    desc: 'Same idempotency_key submitted twice',
+    safetyBehavior: '1 mutation. Second call returns NO_OP (replayed=True). Duplicate writes: 0.',
+    injectEventType: null, // test-infrastructure only
+  },
+  {
+    id: 'F10',
+    name: 'STATE DRIFT',
+    desc: 'World state changed between assessment and execution',
+    safetyBehavior: 'ActionConflict blocks write. Drift blocks: 1. Unauthorized writes: 0.',
+    injectEventType: 'equipment_fault' as InjectEventType,
+    // No asset_id: the backend resolves an eligible asset from the active world.
+    injectPayload: { equipment_type: 'agv', fault_code: 'E_STATE_DRIFT_SIM' },
+  },
+  {
+    id: 'F12',
+    name: 'CIRCUIT OPEN',
+    desc: 'Labor MCP server unreachable — its circuit breaker trips',
+    safetyBehavior:
+      'Labor: CIRCUIT OPEN, MAIW DEGRADED; other circuits closed. No analysis or approval on partial state; writes: 0.',
+    // The labor MCP server becomes unreachable for the API's MCP client and
+    // the real labor circuit breaker trips; RESTORE (mcp_restore) ends it.
+    injectEventType: 'mcp_outage' as InjectEventType,
+    injectPayload: { domain: 'labor' },
+    restoreEventType: 'mcp_restore' as InjectEventType,
+    restorePayload: { domain: 'labor' },
+  },
+];
+
+interface Props {
+  scenarioActive: boolean;
+}
+
+export default function FaultInjectionPanel({ scenarioActive }: Props) {
+  const [injecting, setInjecting] = useState<string | null>(null);
+  const [lastInjected, setLastInjected] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function handleInject(profile: FaultProfile) {
+    if (!profile.injectEventType || !scenarioActive) return;
+    setInjecting(profile.id);
+    setFeedback(null);
+    try {
+      const result = await demoAPI.inject(profile.injectEventType, profile.injectPayload ?? {});
+      setLastInjected(profile.id);
+      const target = describeInjectTarget(result);
+      setFeedback({ ok: true, text: target ? `${profile.id} · ${target}` : `${profile.id} · injected` });
+    } catch (e) {
+      console.error('Fault inject failed', e);
+      setFeedback({ ok: false, text: `${profile.id} · ${describeInjectError(e)}` });
+    } finally {
+      setInjecting(null);
+    }
+  }
+
+  async function handleRestore(profile: FaultProfile) {
+    if (!profile.restoreEventType) {
+      return;
+    }
+    setInjecting(profile.id);
+    setFeedback(null);
+    try {
+      await demoAPI.inject(profile.restoreEventType, profile.restorePayload ?? {});
+      setLastInjected(null);
+      setFeedback({ ok: true, text: `${profile.id} · restored` });
+    } catch (e) {
+      setFeedback({ ok: false, text: `${profile.id} · ${describeInjectError(e)}` });
+    } finally {
+      setInjecting(null);
+    }
+  }
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
+        <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#F85149', letterSpacing: '0.08em', fontWeight: 700 }}>
+          ⚠ DEMO FAULT INJECTION
+        </Typography>
+        <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#484F58' }}>
+          BATCH 6 VALIDATED · SAFE TO RE-RUN
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        {PROFILES.map((p) => {
+          const canInject = !!p.injectEventType && scenarioActive;
+          const wasInjected = lastInjected === p.id;
+          const canRestore = wasInjected && !!p.restoreEventType && scenarioActive;
+          return (
+            <Box key={p.id} sx={{
+              display: 'flex', alignItems: 'flex-start', gap: 0.75,
+              p: 0.75,
+              border: '1px solid #1C2128',
+              borderRadius: 0.5,
+              backgroundColor: '#080C10',
+            }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#F0883E', fontWeight: 700, width: 28, flexShrink: 0, mt: 0.1 }}>
+                {p.id}
+              </Typography>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.65rem', fontWeight: 700, color: '#C9D1D9' }}>
+                  {p.name}
+                </Typography>
+                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#6E7681', mt: 0.1 }}>
+                  {p.desc}
+                </Typography>
+                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#3FB950', mt: 0.1 }}>
+                  {p.safetyBehavior}
+                </Typography>
+              </Box>
+              {canRestore ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={injecting === p.id}
+                  onClick={() => handleRestore(p)}
+                  sx={{
+                    fontSize: '0.6rem', fontFamily: 'monospace', fontWeight: 700,
+                    py: 0.15, px: 0.5, minWidth: 0, flexShrink: 0,
+                    borderColor: '#3FB950', color: '#3FB950',
+                    '&:hover': { borderColor: '#3FB950', background: '#3FB95011' },
+                    '&:disabled': { borderColor: '#30363D', color: '#30363D' },
+                  }}
+                >
+                  {injecting === p.id ? '…' : 'RESTORE'}
+                </Button>
+              ) : canInject ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={injecting === p.id}
+                  onClick={() => handleInject(p)}
+                  sx={{
+                    fontSize: '0.6rem', fontFamily: 'monospace', fontWeight: 700,
+                    py: 0.15, px: 0.5, minWidth: 0, flexShrink: 0,
+                    borderColor: wasInjected ? '#3FB950' : '#F85149',
+                    color: wasInjected ? '#3FB950' : '#F85149',
+                    '&:hover': { borderColor: '#F85149', background: '#F8514911' },
+                    '&:disabled': { borderColor: '#30363D', color: '#30363D' },
+                  }}
+                >
+                  {wasInjected ? 'SENT' : injecting === p.id ? '…' : 'INJECT'}
+                </Button>
+              ) : (
+                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#484F58', flexShrink: 0, mt: 0.25 }}>
+                  TEST ONLY
+                </Typography>
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {feedback && (
+        <Typography
+          data-testid="fault-inject-feedback"
+          sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: feedback.ok ? '#3FB950' : '#F85149', mt: 0.5 }}
+        >
+          {feedback.text}
+        </Typography>
+      )}
+
+      {!scenarioActive && (
+        <Typography sx={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#484F58', mt: 0.5 }}>
+          Start a scenario to enable injectable faults
+        </Typography>
+      )}
+    </Box>
+  );
+}

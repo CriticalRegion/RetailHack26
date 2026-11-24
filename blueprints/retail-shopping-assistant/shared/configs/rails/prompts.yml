@@ -1,0 +1,21 @@
+# NeMo validates that model-backed built-in flows have prompt definitions at
+# load time. The service overrides their actions with the current Nemotron 3.5
+# request contract before any check runs; these definitions are never used for
+# a serving decision.
+prompts:
+  - task: content_safety_check_input $model=content_safety
+    content: |
+      {{ user_input }}
+    output_parser: nemoguard_parse_prompt_safety
+    max_tokens: 100
+
+  - task: content_safety_check_output $model=content_safety
+    content: |
+      User request: Evaluate the following assistant response for safety.
+      Assistant response: {{ bot_response }}
+    output_parser: nemoguard_parse_response_safety
+    max_tokens: 100
+
+  - task: topic_safety_check_input $model=topic_control
+    content: |
+      Determine whether the shopper request is within retail shopping scope.

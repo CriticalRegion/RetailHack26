@@ -1,0 +1,199 @@
+name: CI
+
+on:
+  push:
+    branches: [main, acp-implementation, feat/apps-sdk-implementation]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff linting
+        run: ruff check src/merchant/ src/payment/ src/apps_sdk/ tests/
+
+      - name: Run Ruff formatting check
+        run: ruff format --check src/merchant/ src/payment/ src/apps_sdk/ tests/
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run Pyright
+        run: pyright src/merchant/ src/payment/ src/apps_sdk/
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pytest pytest-asyncio
+
+      - name: Run pytest
+        run: pytest tests/ -v --tb=short
+        env:
+          TMPDIR: ${{ runner.temp }}/pytest-tmp
+
+  agent-test:
+    name: Commerce Agent Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/agents
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the locked agent environment
+        run: |
+          python -m pip install uv
+          uv sync --locked --extra dev
+
+      - name: Check the runtime and HTTP contracts
+        run: |
+          uv run --locked --extra dev ruff check commerce_agents tests
+          uv run --locked --extra dev ruff format --check commerce_agents tests
+          uv run --locked --extra dev pyright commerce_agents
+          uv run --locked --extra dev pytest tests -q
+
+  ui-lint:
+    name: UI Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: src/ui
+        run: pnpm install
+
+      - name: Run ESLint
+        working-directory: src/ui
+        run: pnpm lint
+
+      - name: Run Prettier check
+        working-directory: src/ui
+        run: pnpm format:check
+
+      - name: Run TypeScript check
+        working-directory: src/ui
+        run: pnpm typecheck
+
+  ui-test:
+    name: UI Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: src/ui
+        run: pnpm install
+
+      - name: Run Vitest
+        working-directory: src/ui
+        run: pnpm test:run
+
+  apps-sdk-widget-typecheck:
+    name: Apps SDK Widget TypeCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: src/apps_sdk/web
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run TypeScript check
+        working-directory: src/apps_sdk/web
+        run: pnpm typecheck
+
+  apps-sdk-widget-build:
+    name: Apps SDK Widget Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: src/apps_sdk/web
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build widget
+        working-directory: src/apps_sdk/web
+        run: pnpm build

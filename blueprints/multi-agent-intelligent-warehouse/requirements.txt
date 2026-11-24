@@ -1,0 +1,51 @@
+fastapi>=0.120.0,<0.163  # Lower bound: starlette>=0.49.1 support (nemoguardrails 0.19.0+). Upper bound: newest minor CORE CI is tested on (0.162.0, pinned in requirements.docker.txt); raise it only after CI passes on the new minor (0.162 removed **extra and broke startup).
+starlette>=1.10.0,<1.11  # Lower bound: the version CORE CI and the images install (pinned in requirements.docker.txt); nSpect reads the minimum as the installed version, and the old 0.49.1 minimum (needed by nemoguardrails 0.19.0+) carried known findings. Upper bound: newest minor CORE CI is tested on.
+uvicorn[standard]==0.54.0
+pydantic>=2.7
+httpx>=0.28.1
+python-dotenv>=1.0
+loguru>=0.7.3
+langgraph>=1.2.19  # Security: the version CORE CI and the images install; nSpect reads the minimum as the installed version, and the old 1.0.5 minimum carried known findings. Also covers CVE-2025-8709 (fixed in 1.0.5). Note: We use in-memory state (no SQLite checkpoint) as additional defense.
+langgraph-checkpoint>=4.3.1  # Security: the version CORE CI and the images install; nSpect reads the minimum as the installed version, and the old 3.0.0 minimum carried known findings. Also covers CVE-2025-64439 (RCE in JsonPlusSerializer, fixed in 3.0.0). Note: We use in-memory state (no checkpoint backend), but pinning secure version for transitive dependencies.
+asyncpg>=0.32.0
+anyio>=4.16.0  # Async file I/O for asyncio compatibility
+pymilvus>=2.3.0
+numpy>=1.24.0
+langchain-core>=1.8.0  # Security: 1.7.3+ fixes BDSA-2026-9844 (langchain_core.load allowed_objects defaulted to "all"), CVE-2025-68664 (serialization injection) and CVE-2024-28088 (directory traversal). The app never calls langchain_core.load; it uses json.dumps() as additional defense.
+aiohttp>=3.14.5  # Security: Fixed zip bomb DoS (BDSA) in 3.13.3+ (DEFAULT_MAX_DECOMPRESS_SIZE=32MiB). Also fixes: CVE-2024-52304 (3.10.11+), CVE-2024-30251 (3.9.4+), CVE-2023-37276 (3.8.5+), CVE-2024-23829 (3.8.5+). Client-only usage (not server) = additional defense. C extensions enabled. See docs/security/VULNERABILITY_MITIGATIONS.md
+PyYAML>=6.0.3
+prometheus-client>=0.19.0
+psutil>=7.2.2
+click>=8.5.1
+psycopg[binary]>=3.0.0
+websockets>=17.4
+paho-mqtt>=2.2.0
+pymodbus>=3.16.2
+bacpypes3>=0.0.110  # BACnet protocol library for IoT safety sensors (optional - only needed for BACnet integration)
+# ERP Integration
+requests>=2.34.2  # Fixed .netrc credentials leak (CVE-2024-47081), Session verify=False persistence MITM (CVE-2024-35195) and insecure temp file reuse in extract_zipped_paths (CVE-2026-25645, fixed in 2.33.0); 2.34.2 is what the images install
+# RFID/Barcode Scanning
+pyserial>=3.5
+# Time Attendance
+# pybluez>=0.23  # Disabled: incompatible with Python 3.11+ (use_2to3 deprecated)
+tiktoken
+redis>=5.0.0
+python-multipart
+scikit-learn>=1.9.1  # Fixed information exposure in TfidfVectorizer/CountVectorizer stop_words_ (CVE-2024-5206)
+pandas>=1.2.4
+xgboost>=3.2.0
+# RAPIDS GPU acceleration (optional - requires NVIDIA GPU with CUDA 12.x)
+# Install with: pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cuml-cu12
+# Or run: ./scripts/setup/install_rapids.sh
+# cudf-cu12>=24.8.0  # GPU-accelerated DataFrames (optional)
+# cuml-cu12>=24.8.0  # GPU-accelerated Machine Learning (optional)
+# Document Processing
+Pillow>=13.0.0  # Fixed buffer overflow in _imagingcms.c (CVE-2024-28219)
+pdf2image==1.17.0  # MIT License - PDF to image conversion (requires poppler-utils system package)
+pdfplumber==0.11.10  # MIT License - PDF text extraction; 0.11.9 pins pdfminer.six==20251230 (fixes PYSEC-2026-1761)
+# NeMo Guardrails SDK (Phase 1 - Migration)
+# Note: nemoguardrails automatically installs transitive dependencies including:
+# langchain, langchain-community, fastembed, annoy, jinja2, lark, nest-asyncio,
+# prompt-toolkit, rich, simpleeval, typer, watchdog, and others.
+# These are managed as transitive dependencies and don't need to be listed explicitly.
+nemoguardrails>=0.24.1  # NVIDIA NeMo Guardrails SDK for programmable guardrails (latest version)

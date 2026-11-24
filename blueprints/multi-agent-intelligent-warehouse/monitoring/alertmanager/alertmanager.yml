@@ -1,0 +1,20 @@
+# Alerts are visible in the Alertmanager UI (http://localhost:9093) and in
+# Prometheus. No notifications are sent by default. To be notified, add an
+# email, Slack or webhook configuration to the `default` receiver, see
+# https://prometheus.io/docs/alerting/latest/configuration/#receiver
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default'
+
+receivers:
+  - name: 'default'
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ['alertname']

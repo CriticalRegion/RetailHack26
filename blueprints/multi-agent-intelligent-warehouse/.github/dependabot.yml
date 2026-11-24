@@ -1,0 +1,151 @@
+version: 2
+updates:
+  # Python dependencies - Core backend
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    # Limits open version-update PRs only; security updates are not counted.
+    open-pull-requests-limit: 5
+    reviewers:
+      - "T-DevH"
+    assignees:
+      - "T-DevH"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+      - "backend"
+    # Routine minor and patch updates arrive as one PR. Major updates and the
+    # warehouse-integration libraries (MQTT, Modbus, BACnet, serial,
+    # websockets) still get their own PRs: their APIs change between
+    # releases, and CI does not exercise those adapters against real devices.
+    groups:
+      python-minor-and-patch:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "paho-mqtt"
+          - "pymodbus"
+          - "bacpypes3"
+          - "pyserial"
+          - "websockets"
+        update-types:
+          - "minor"
+          - "patch"
+    # requirements.blocklist.txt lists packages that must never be installed,
+    # not dependencies. Dependabot read it as a requirements file and
+    # rewrote its comments (#297).
+    exclude-paths:
+      - "requirements.blocklist.txt"
+    # Ignore major version updates for critical packages
+    ignore:
+      # Blocklisted, never installed; belt and braces for exclude-paths.
+      - dependency-name: "langgraph-checkpoint-sqlite"
+      - dependency-name: "fastapi"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "uvicorn"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "langchain"
+        update-types: ["version-update:semver-major"]
+      # fastembed (pulled in by nemoguardrails) requires loguru<0.8, up to
+      # fastembed 0.9.1; raising the floor made pip backtrack into an
+      # unbuildable pandas (#329). Remove once fastembed allows loguru 0.8.
+      - dependency-name: "loguru"
+        versions: [">= 0.8.0"]
+
+  # Node.js dependencies - Frontend UI
+  - package-ecosystem: "npm"
+    directory: "/src/ui/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 15
+    reviewers:
+      - "T-DevH"
+    assignees:
+      - "T-DevH"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "javascript"
+      - "frontend"
+    # All minor and patch updates arrive as one PR
+    groups:
+      ui-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # No version-update PRs for major versions: UI majors are upgraded
+    # deliberately. Security updates are not affected by update-types ignores.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Docker dependencies - Container images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 8
+    reviewers:
+      - "T-DevH"
+    assignees:
+      - "T-DevH"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "infrastructure"
+    # Node major versions are adopted deliberately, in every Dockerfile and
+    # the CI matrix together (#290 proposed Node 26 for the root Dockerfile
+    # only). Minor, patch and digest updates still arrive.
+    #
+    # Python minor and major versions are adopted deliberately too: CI runs on
+    # 3.11, the backend image on 3.13, and the root Dockerfile copies a
+    # version-specific site-packages path (#326 proposed 3.11 -> 3.15 for the
+    # root Dockerfile only). Patch and digest updates still arrive. Dependabot
+    # only updates FROM lines, not ARG defaults (Dockerfile.backend,
+    # Dockerfile.frontend), so those are bumped by hand.
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  # GitHub Actions - CI/CD workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 8
+    reviewers:
+      - "T-DevH"
+    assignees:
+      - "T-DevH"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+    # Allowed only at one pinned commit by the repository's allowed-actions
+    # policy; any other version fails the deployment workflow at startup.
+    ignore:
+      - dependency-name: "dawidd6/action-send-mail"

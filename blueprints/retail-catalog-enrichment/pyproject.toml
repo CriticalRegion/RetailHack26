@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling>=1.21.1"]
+build-backend = "hatchling.build"
+
+[project]
+name = "catalog-enrichment"
+version = "0.1.0"
+description = "A system for enriching product catalog data with additional metadata, descriptions, and categorization."
+requires-python = ">=3.11"
+dependencies = [
+  "uvicorn[standard]==0.38.0",
+  "starlette==1.3.1",
+  "fastapi==0.137.0",
+  "python-multipart==0.0.31",
+  "openai==2.26.0",
+  "python-dotenv==1.2.2",
+  "requests==2.33.0",
+  "httpx==0.28.1",
+  "certifi>=2026.10.23",
+  "pillow==13.0.0",
+  "pymilvus==2.5.15",
+  "setuptools>=84.1.0",
+  "pyyaml==6.0.3",
+  "pypdf==6.21.4",
+  "numpy>=1.26.0",
+  "langchain-openai==1.1.14",
+  "exa-py==2.12.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend"]
+
+[tool.uv]
+managed = true
+constraint-dependencies = [
+  "anyio>=4.14.2",
+  "click>=8.3.3",
+  "cryptography>=50.0.0",
+  "grpcio>=1.83.0",
+  "idna>=3.15",
+  "langsmith>=0.8.18",
+  "protobuf==7.36.0",
+  "pyasn1>=0.6.4",
+  "pygments>=2.20.0",
+  "ujson>=5.13.0",
+  "urllib3>=2.8.0",
+]
+dev-dependencies = [
+  "pytest==9.0.3",
+  "pytest-mock==3.14.0",
+  "pytest-asyncio==1.3.0",
+  "httpx==0.28.1",
+]

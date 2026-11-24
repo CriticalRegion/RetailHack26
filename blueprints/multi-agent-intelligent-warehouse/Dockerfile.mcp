@@ -1,0 +1,88 @@
+# Dockerfile.mcp — MAIW MCP domain server image
+#
+# Build args:
+#   MCP_DOMAIN   inventory | equipment | labor | wave
+#
+# Example:
+#   docker build --build-arg MCP_DOMAIN=inventory -t maiw-mcp-inventory .
+#
+# Entrypoint (override via compose environment):
+#   MAIW_MCP_TRANSPORT=streamable-http
+#   MAIW_MCP_INVENTORY_PORT=8765   (or EQUIPMENT/LABOR/WAVE variants)
+#
+# Base: Python 3.11 on Debian 13 (trixie), pinned by tag + digest, so a
+# rebuild cannot silently pick up a different Python or Debian release. It is
+# written in FROM, not in an ARG default, because Dependabot only updates FROM
+# lines; it proposes patch and digest updates for this file and the root
+# Dockerfile together (same image, kept equal by a test). Python minor and
+# major versions are adopted deliberately (.github/dependabot.yml).
+
+FROM python:3.11.18-slim-trixie@sha256:07d4824036af339fa1b6ef769cc99d9c10a141769538b52b3b597c84f7a7b535 AS base
+
+ARG MCP_DOMAIN=inventory
+
+WORKDIR /app
+
+# Debian security fixes published after the base image was built. No curl:
+# the Compose healthchecks use the Python standard library.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install shared packages first (cacheable layer).  Every maiw_* package the
+# servers import at startup must be here: maiw_contracts (all domains) and
+# maiw_decision (equipment) moved out of maiw-mcp in #94, and without them
+# every server exits with ModuleNotFoundError.  Guarded by
+# tests/api/test_mcp_image.py.
+COPY packages/maiw-contracts ./packages/maiw-contracts
+COPY packages/maiw-decision ./packages/maiw-decision
+COPY packages/maiw-mcp ./packages/maiw-mcp
+COPY packages/maiw-models ./packages/maiw-models
+COPY packages/maiw-state ./packages/maiw-state
+RUN pip install --no-cache-dir \
+    packages/maiw-contracts \
+    packages/maiw-decision \
+    packages/maiw-mcp \
+    packages/maiw-models \
+    packages/maiw-state
+
+# Third-party packages the domain backends import (versions as in
+# requirements.docker.txt).  src.retrieval eagerly imports its vector and
+# hybrid retrievers (numpy, pymilvus, tiktoken, redis) and the WMS / ERP /
+# scanning integrations use aiohttp.  The equipment server builds its
+# PostgreSQL provider at startup, so a missing one crash-loops the container.
+RUN pip install --no-cache-dir \
+    asyncpg \
+    python-dotenv \
+    "numpy>=1.24.0" \
+    "pymilvus>=2.3.0" \
+    "tiktoken>=0.7.0" \
+    "redis>=4.0.0" \
+    "aiohttp>=3.14.5"
+
+# Nothing installs packages at runtime. setuptools, wheel and pip only carry
+# vendored copies of other packages (setuptools' jaraco.context and wheel were
+# HIGH findings), so remove them, as Dockerfile.backend does for pip.
+RUN python -m pip uninstall -y setuptools wheel pip
+
+# Copy only the code paths the MCP servers need
+COPY src/retrieval ./src/retrieval
+COPY src/api/agents ./src/api/agents
+COPY src/api/services ./src/api/services
+COPY src/api/utils ./src/api/utils
+COPY src/adapters ./src/adapters
+COPY mcp_servers/__init__.py ./mcp_servers/__init__.py
+COPY mcp_servers/${MCP_DOMAIN} ./mcp_servers/${MCP_DOMAIN}
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV MCP_DOMAIN=${MCP_DOMAIN}
+
+# Default: streamable-http (stateless — no session affinity required)
+ENV MAIW_MCP_TRANSPORT=streamable-http
+
+RUN groupadd -r mcpuser && useradd -r -g mcpuser mcpuser
+USER mcpuser
+
+CMD python -m mcp_servers.${MCP_DOMAIN}.server

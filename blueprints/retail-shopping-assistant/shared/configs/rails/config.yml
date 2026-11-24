@@ -1,0 +1,40 @@
+models:
+  - type: main
+    engine: nim
+    model: model-config-managed-main
+    parameters:
+      base_url: http://model-config-managed/v1
+    
+  - type: content_safety
+    engine: nim
+    model: model-config-managed-content-safety
+    parameters:
+      base_url: http://model-config-managed/v1
+
+  - type: topic_control
+    engine: nim
+    model: model-config-managed-topic-control
+    parameters:
+      base_url: http://model-config-managed/v1
+
+bot_messages:
+  refuse to respond: 
+    - "Sorry, I am a shopping assistant and can only help you with your shopping needs."
+
+rails:
+  input:
+    parallel: true
+    flows:
+      - content safety check input $model=content_safety
+      - topic safety check input $model=topic_control
+  output:
+    flows:
+      - content safety check output $model=content_safety
+    streaming:
+      chunk_size: 200
+      context_size: 50
+
+tracing:
+  # Application-level OpenTelemetry records decision metadata only. NeMo's
+  # filesystem tracer is disabled so shopper bodies never land in trace files.
+  enabled: False

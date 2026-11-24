@@ -1,0 +1,681 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+"""Local runner for Retail Shopping Assistant.
+
+This script keeps the app services outside containers while using Docker only for
+the Milvus infrastructure services from docker-compose.yaml.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import os
+import shlex
+import signal
+import socket
+import subprocess
+import sys
+import time
+from collections.abc import Iterable, Mapping
+from http.client import HTTPException
+from pathlib import Path
+from urllib.error import URLError
+from urllib.parse import urlparse
+from urllib.request import urlopen
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+RUN_DIR = REPO_ROOT / ".local-run"
+PID_DIR = RUN_DIR / "pids"
+LOG_DIR = RUN_DIR / "logs"
+STAMP_DIR = RUN_DIR / "install-stamps"
+DEV_VENV_DIR = RUN_DIR / "dev-venv"
+MODEL_ENV = RUN_DIR / "model-endpoints.env"
+DEV_REQUIREMENTS = REPO_ROOT / "tests" / "requirements-dev.txt"
+INTEGRATION_REQUIREMENTS = REPO_ROOT / "tests" / "requirements.txt"
+UI_PUBLIC_IMAGES = REPO_ROOT / "ui" / "public" / "images"
+SHARED_IMAGES = REPO_ROOT / "shared" / "images"
+
+INFRA_SERVICES = ("etcd", "seaweedfs", "milvus")
+MILVUS_GRPC_PORT = 19530
+MILVUS_HEALTH_URL = "http://localhost:9091/healthz"
+
+PYTHON_SERVICES = {
+    "memory-retriever": {
+        "service_dir": REPO_ROOT / "memory_retriever",
+        "requirements": REPO_ROOT / "memory_retriever" / "requirements.txt",
+        "module": "src.main:app",
+        "port": 8011,
+        "health_url": "http://localhost:8011/health",
+        "pythonpath": [REPO_ROOT / "memory_retriever"],
+    },
+    "guardrails": {
+        "service_dir": REPO_ROOT / "guardrails",
+        "requirements": REPO_ROOT / "guardrails" / "src" / "requirements.txt",
+        "module": "src.main:app",
+        "port": 8012,
+        "health_url": "http://localhost:8012/health",
+        "pythonpath": [REPO_ROOT / "guardrails" / "src", REPO_ROOT / "guardrails"],
+    },
+    "catalog-retriever": {
+        "service_dir": REPO_ROOT / "catalog_retriever",
+        "requirements": REPO_ROOT / "catalog_retriever" / "requirements.txt",
+        "module": "src.main:app",
+        "port": 8010,
+        "health_url": "http://localhost:8010/health",
+        "pythonpath": [REPO_ROOT / "catalog_retriever"],
+    },
+    "orchestrator": {
+        "service_dir": REPO_ROOT / "orchestrator",
+        "requirements": REPO_ROOT / "orchestrator" / "requirements.txt",
+        "module": "src.main:app",
+        "port": 8009,
+        "health_url": "http://localhost:8009/health",
+        "pythonpath": [REPO_ROOT / "orchestrator"],
+    },
+}
+
+UI_SERVICE = "ui"
+ALL_LOCAL_SERVICES = (*PYTHON_SERVICES.keys(), UI_SERVICE)
+ORCHESTRATOR_ONLY_ENV_KEYS = frozenset(
+    {
+        "WEATHER_ENABLED",
+        "WEATHER_API_KEY",
+    }
+)
+
+
+def ensure_dirs() -> None:
+    for path in (RUN_DIR, PID_DIR, LOG_DIR, STAMP_DIR):
+        path.mkdir(parents=True, exist_ok=True)
+
+
+def shell_join(command: Iterable[str]) -> str:
+    return shlex.join(str(part) for part in command)
+
+
+def run(command: list[str], *, cwd: Path = REPO_ROOT, env: dict[str, str] | None = None) -> None:
+    print(f"$ {shell_join(command)}")
+    subprocess.run(command, cwd=cwd, env=env, check=True)
+
+
+def file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def venv_python(service_dir: Path) -> Path:
+    return service_dir / "venv" / "bin" / "python"
+
+
+def ensure_virtualenv(venv_dir: Path) -> Path:
+    python_bin = venv_dir / "bin" / "python"
+    if not python_bin.exists():
+        run([sys.executable, "-m", "venv", str(venv_dir)])
+    return python_bin
+
+
+def ensure_python_deps(name: str, spec: dict[str, object]) -> None:
+    service_dir = spec["service_dir"]
+    requirements = spec["requirements"]
+    assert isinstance(service_dir, Path)
+    assert isinstance(requirements, Path)
+
+    python_bin = ensure_virtualenv(service_dir / "venv")
+
+    req_hash = file_sha256(requirements)
+    stamp = STAMP_DIR / f"{name}.requirements.sha256"
+    if not stamp.exists() or stamp.read_text().strip() != req_hash:
+        run([str(python_bin), "-m", "pip", "install", "-r", str(requirements)], cwd=service_dir)
+        stamp.write_text(f"{req_hash}\n")
+
+
+def ensure_python_dev_deps(*, include_integration: bool) -> None:
+    python_bin = ensure_virtualenv(DEV_VENV_DIR)
+    requirement_files = [DEV_REQUIREMENTS]
+    if include_integration:
+        requirement_files.append(INTEGRATION_REQUIREMENTS)
+
+    for requirements in requirement_files:
+        req_hash = file_sha256(requirements)
+        stamp = STAMP_DIR / f"dev.{requirements.name}.sha256"
+        if not stamp.exists() or stamp.read_text().strip() != req_hash:
+            run([str(python_bin), "-m", "pip", "install", "-r", str(requirements)], cwd=REPO_ROOT)
+            stamp.write_text(f"{req_hash}\n")
+        else:
+            print(f"{requirements.relative_to(REPO_ROOT)} already installed in {DEV_VENV_DIR.relative_to(REPO_ROOT)}")
+
+    print(f"Python dev environment ready: {python_bin.relative_to(REPO_ROOT)}")
+
+
+def ensure_ui_deps() -> None:
+    ui_dir = REPO_ROOT / "ui"
+    if not (ui_dir / "node_modules").exists():
+        run(["npm", "install"], cwd=ui_dir)
+
+
+def ensure_ui_image_assets() -> None:
+    """Expose shared product images from the React dev server public root."""
+    if not SHARED_IMAGES.is_dir():
+        raise SystemExit(f"Shared image directory is missing: {SHARED_IMAGES}")
+
+    if UI_PUBLIC_IMAGES.is_symlink():
+        if UI_PUBLIC_IMAGES.resolve() == SHARED_IMAGES.resolve():
+            return
+        UI_PUBLIC_IMAGES.unlink()
+    elif UI_PUBLIC_IMAGES.exists():
+        raise SystemExit(
+            f"{UI_PUBLIC_IMAGES.relative_to(REPO_ROOT)} exists and is not the expected symlink. "
+            f"Move it aside before starting the local UI."
+        )
+
+    UI_PUBLIC_IMAGES.symlink_to(SHARED_IMAGES, target_is_directory=True)
+    print(f"linked {UI_PUBLIC_IMAGES.relative_to(REPO_ROOT)} -> {SHARED_IMAGES.relative_to(REPO_ROOT)}")
+
+
+def parse_model_host(raw_host: str) -> tuple[str, str]:
+    host = raw_host.strip().rstrip("/")
+    if not host:
+        raise SystemExit("Model host cannot be empty.")
+    if "://" not in host:
+        host = f"http://{host}"
+
+    parsed = urlparse(host)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise SystemExit(f"Invalid model host URL: {raw_host}")
+
+    hostname = parsed.hostname
+    if ":" in hostname and not hostname.startswith("["):
+        hostname = f"[{hostname}]"
+    return parsed.scheme, hostname
+
+
+def model_endpoint(raw_host: str, port: int) -> str:
+    scheme, host = parse_model_host(raw_host)
+    return f"{scheme}://{host}:{port}/v1"
+
+
+def get_model_host(args: argparse.Namespace, *, required: bool) -> str | None:
+    if getattr(args, "model_host", None):
+        return args.model_host
+    if sys.stdin.isatty():
+        prompt = "Remote model host, without per-model port (example: http://MODEL_HOST): "
+        value = input(prompt).strip()
+        if value:
+            return value
+    if required:
+        raise SystemExit(
+            "Missing model host. Ask the user: What is the remote model host URL? "
+            "Use the base host without per-model ports, for example http://MODEL_HOST. "
+            "Then re-run with --model-host http://HOST."
+        )
+    return None
+
+
+def write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    print(f"wrote {path.relative_to(REPO_ROOT)}")
+
+
+def configure(args: argparse.Namespace) -> None:
+    model_host = get_model_host(args, required=True)
+    assert model_host is not None
+
+    # Ports and served model names match docker-compose-model-local.yaml.
+    llm_url = model_endpoint(model_host, 8000)
+    text_embed_url = model_endpoint(model_host, 8001)
+    content_url = model_endpoint(model_host, 8003)
+    topic_url = model_endpoint(model_host, 8004)
+    video_safety_url = model_endpoint(model_host, 8005)
+    write_text(
+        MODEL_ENV,
+        "\n".join(
+            [
+                "# Generated by skills/retail-local-runner/scripts/local_runner.py",
+                f'export LLM_BASE_URL="{llm_url}"',
+                'export LLM_MODEL="nemotron-3.5-super"',
+                f'export VLM_BASE_URL="{llm_url}"',
+                'export VLM_MODEL="nemotron-3.5-super"',
+                f'export TEXT_EMBED_BASE_URL="{text_embed_url}"',
+                'export TEXT_EMBED_MODEL="nvidia/Nemotron-3.5-Embed-1B-BF16"',
+                f'export RAILS_CONTENT_BASE_URL="{content_url}"',
+                'export RAILS_CONTENT_MODEL="nvidia/nemotron-3.5-content-safety"',
+                f'export RAILS_TOPIC_BASE_URL="{topic_url}"',
+                'export RAILS_TOPIC_MODEL="llama-3.1-nemoguard-8b-topic-control"',
+                f'export MULTIMODAL_SAFETY_BASE_URL="{video_safety_url}"',
+                'export MULTIMODAL_SAFETY_MODEL="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"',
+                "",
+            ]
+        ),
+    )
+
+
+def base_env() -> dict[str, str]:
+    env = os.environ.copy()
+    model_env_loaded = load_model_env(env)
+    default_key = env.get("NVIDIA_API_KEY", "").strip()
+    if model_env_loaded and not default_key:
+        default_key = "local"
+    if default_key:
+        set_if_empty(env, "LLM_API_KEY", default_key)
+        set_if_empty(env, "EMBED_API_KEY", default_key)
+        set_if_empty(env, "RAIL_API_KEY", default_key)
+        set_if_empty(env, "VLM_API_KEY", default_key)
+        set_if_empty(env, "MULTIMODAL_SAFETY_API_KEY", default_key)
+        set_if_empty(env, "NVIDIA_API_KEY", default_key)
+    if env.get("RAIL_API_KEY") and not env.get("NVIDIA_API_KEY"):
+        env["NVIDIA_API_KEY"] = env["RAIL_API_KEY"]
+    env["SHARED_ROOT"] = str(REPO_ROOT / "shared")
+    env["SHARED_CONFIG_ROOT"] = str(REPO_ROOT / "shared" / "configs")
+    env["CATALOG_RETRIEVER_URL"] = "http://localhost:8010"
+    env["MEMORY_RETRIEVER_URL"] = "http://localhost:8011"
+    env["GUARDRAILS_URL"] = "http://localhost:8012"
+    env["CATALOG_DB_PORT"] = "http://localhost:19530"
+    set_if_empty(
+        env,
+        "CATALOG_DATA_SOURCE",
+        str(REPO_ROOT / "shared" / "data" / "enriched_products.jsonl"),
+    )
+    set_if_empty(
+        env,
+        "CATALOG_SCHEMA_SOURCE",
+        str(REPO_ROOT / "shared" / "data" / "enriched_products.schema.yaml"),
+    )
+    env["PYTHONUNBUFFERED"] = "1"
+    env["PYTHONPATH"] = str(REPO_ROOT) + (
+        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+    )
+    return env
+
+
+def scope_service_env(
+    service: str,
+    environment: Mapping[str, str],
+) -> dict[str, str]:
+    """Keep orchestrator-only credentials out of sibling local processes."""
+
+    scoped = dict(environment)
+    if service != "orchestrator":
+        for key in ORCHESTRATOR_ONLY_ENV_KEYS:
+            scoped.pop(key, None)
+    return scoped
+
+
+def set_if_empty(env: dict[str, str], key: str, value: str) -> None:
+    if not env.get(key, "").strip():
+        env[key] = value
+
+
+def load_model_env(env: dict[str, str]) -> bool:
+    if not MODEL_ENV.exists():
+        return False
+    for raw_line in MODEL_ENV.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        env[key] = value
+    return True
+
+
+def with_pythonpath(env: dict[str, str], paths: list[Path]) -> dict[str, str]:
+    new_env = env.copy()
+    path_parts = [str(path) for path in paths]
+    if new_env.get("PYTHONPATH"):
+        path_parts.append(new_env["PYTHONPATH"])
+    new_env["PYTHONPATH"] = os.pathsep.join(path_parts)
+    return new_env
+
+
+def pid_file(service: str) -> Path:
+    return PID_DIR / f"{service}.pid"
+
+
+def log_file(service: str) -> Path:
+    return LOG_DIR / f"{service}.log"
+
+
+def read_pid(service: str) -> int | None:
+    path = pid_file(service)
+    if not path.exists():
+        return None
+    try:
+        return int(path.read_text().strip())
+    except ValueError:
+        return None
+
+
+def pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def tracked_running(service: str) -> bool:
+    pid = read_pid(service)
+    return bool(pid and pid_alive(pid))
+
+
+def port_open(port: int, host: str = "127.0.0.1") -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        return sock.connect_ex((host, port)) == 0
+
+
+def wait_port(service: str, port: int, timeout: int) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if port_open(port):
+            return True
+        if not tracked_running(service):
+            return False
+        time.sleep(1)
+    return False
+
+
+def wait_http(service: str, url: str, timeout: int) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with urlopen(url, timeout=2) as response:
+                if response.status < 500:
+                    return True
+        except (HTTPException, OSError, TimeoutError, URLError):
+            pass
+        if service in ALL_LOCAL_SERVICES and not tracked_running(service):
+            return False
+        time.sleep(2)
+    return False
+
+
+def local_milvus_available(timeout: int = 3) -> bool:
+    return port_open(MILVUS_GRPC_PORT) and wait_http("milvus", MILVUS_HEALTH_URL, timeout)
+
+
+def last_log_lines(service: str, lines: int = 30) -> str:
+    path = log_file(service)
+    if not path.exists():
+        return f"No log file found for {service}."
+    content = path.read_text(errors="replace").splitlines()
+    return "\n".join(content[-lines:])
+
+
+def assert_port_available(service: str, port: int) -> None:
+    if tracked_running(service):
+        return
+    if port_open(port):
+        raise SystemExit(f"Port {port} is already in use, but {service} is not tracked in {PID_DIR}.")
+
+
+def preflight_ports_available() -> None:
+    for service, spec in PYTHON_SERVICES.items():
+        port = spec["port"]
+        assert isinstance(port, int)
+        assert_port_available(service, port)
+    assert_port_available(UI_SERVICE, 3000)
+
+
+def start_process(
+    service: str,
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    port: int | None = None,
+) -> None:
+    if tracked_running(service):
+        print(f"{service} already running with pid {read_pid(service)}")
+        return
+
+    if port is not None:
+        assert_port_available(service, port)
+
+    ensure_dirs()
+    pid_file(service).unlink(missing_ok=True)
+    log_path = log_file(service)
+    log_handle = log_path.open("ab")
+    log_handle.write(f"\n\n=== starting {service}: {shell_join(command)} ===\n".encode())
+    log_handle.flush()
+
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        stdout=log_handle,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    pid_file(service).write_text(f"{process.pid}\n")
+    time.sleep(1)
+    if not pid_alive(process.pid):
+        raise SystemExit(f"{service} exited during startup.\n{last_log_lines(service)}")
+    print(f"started {service} pid={process.pid} log={log_path.relative_to(REPO_ROOT)}")
+
+
+def stop_process(service: str, timeout: int = 15) -> None:
+    pid = read_pid(service)
+    if not pid:
+        print(f"{service}: no tracked pid")
+        return
+    if not pid_alive(pid):
+        print(f"{service}: stale pid {pid}")
+        pid_file(service).unlink(missing_ok=True)
+        return
+
+    print(f"stopping {service} pid={pid}")
+    try:
+        os.killpg(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pid_file(service).unlink(missing_ok=True)
+        return
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not pid_alive(pid):
+            pid_file(service).unlink(missing_ok=True)
+            return
+        time.sleep(0.5)
+
+    print(f"{service}: SIGTERM timed out; sending SIGKILL")
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    pid_file(service).unlink(missing_ok=True)
+
+
+def start_infra() -> None:
+    if local_milvus_available():
+        print(f"Reusing existing local Milvus at localhost:{MILVUS_GRPC_PORT}.")
+        return
+
+    run(["docker", "compose", "-f", "docker-compose.yaml", "up", "-d", *INFRA_SERVICES])
+    if not wait_http("milvus", MILVUS_HEALTH_URL, 120):
+        raise SystemExit(f"Milvus did not become healthy at {MILVUS_HEALTH_URL}")
+
+
+def stop_infra() -> None:
+    run(["docker", "compose", "-f", "docker-compose.yaml", "stop", "milvus", "seaweedfs", "etcd"])
+
+
+def install_dev(args: argparse.Namespace) -> None:
+    ensure_python_dev_deps(include_integration=args.include_integration)
+
+
+def start_python_service(name: str, spec: dict[str, object], *, skip_install: bool) -> None:
+    service_dir = spec["service_dir"]
+    module = spec["module"]
+    port = spec["port"]
+    pythonpath = spec["pythonpath"]
+    assert isinstance(service_dir, Path)
+    assert isinstance(module, str)
+    assert isinstance(port, int)
+    assert isinstance(pythonpath, list)
+
+    if not skip_install:
+        ensure_python_deps(name, spec)
+
+    env = with_pythonpath(scope_service_env(name, base_env()), pythonpath)
+    command = [
+        str(venv_python(service_dir)),
+        "-m",
+        "uvicorn",
+        module,
+        "--host",
+        "0.0.0.0",
+        "--port",
+        str(port),
+    ]
+    start_process(name, command, cwd=service_dir, env=env, port=port)
+
+
+def start_ui(*, skip_install: bool) -> None:
+    ensure_ui_image_assets()
+    if not skip_install:
+        ensure_ui_deps()
+    env = scope_service_env(UI_SERVICE, os.environ)
+    env["PORT"] = "3000"
+    # Relative, and proxied to the orchestrator by ui/vite.config.ts. An
+    # absolute http://localhost:8009 is resolved by the *browser*, so it only
+    # works when the browser shares a machine with the services: reaching the
+    # app through a forwarded port forwards 3000 and not 8009, and every
+    # request dies with "Failed to fetch" before it leaves the page.
+    env["VITE_API_BASE_URL"] = "/api"
+    start_process(UI_SERVICE, ["npm", "start"], cwd=REPO_ROOT / "ui", env=env, port=3000)
+
+
+def start(args: argparse.Namespace) -> None:
+    ensure_dirs()
+    if args.model_host:
+        configure(args)
+
+    preflight_ports_available()
+    start_infra()
+
+    start_python_service("memory-retriever", PYTHON_SERVICES["memory-retriever"], skip_install=args.skip_install)
+    if not wait_http("memory-retriever", "http://localhost:8011/health", 30):
+        raise SystemExit(f"memory-retriever did not become healthy.\n{last_log_lines('memory-retriever')}")
+
+    start_python_service("guardrails", PYTHON_SERVICES["guardrails"], skip_install=args.skip_install)
+    if not wait_http("guardrails", "http://localhost:8012/health", 120):
+        raise SystemExit(f"guardrails did not become healthy.\n{last_log_lines('guardrails')}")
+
+    start_python_service("catalog-retriever", PYTHON_SERVICES["catalog-retriever"], skip_install=args.skip_install)
+    if not wait_http("catalog-retriever", "http://localhost:8010/health", args.catalog_timeout):
+        raise SystemExit(f"catalog-retriever did not become healthy.\n{last_log_lines('catalog-retriever')}")
+
+    start_python_service("orchestrator", PYTHON_SERVICES["orchestrator"], skip_install=args.skip_install)
+    if not wait_http("orchestrator", "http://localhost:8009/health", 60):
+        raise SystemExit(f"orchestrator did not become healthy.\n{last_log_lines('orchestrator')}")
+
+    start_ui(skip_install=args.skip_install)
+    if not wait_http(UI_SERVICE, "http://localhost:3000", 90):
+        raise SystemExit(f"ui did not become reachable.\n{last_log_lines(UI_SERVICE)}")
+
+    print("Local Retail Shopping Assistant is running at http://localhost:3000")
+
+
+def stop(_args: argparse.Namespace) -> None:
+    for service in reversed(ALL_LOCAL_SERVICES):
+        stop_process(service)
+    stop_infra()
+
+
+def status(_args: argparse.Namespace) -> None:
+    ensure_dirs()
+    if MODEL_ENV.exists():
+        print(f"model endpoint env: {MODEL_ENV.relative_to(REPO_ROOT)}")
+    else:
+        print("model endpoint env: not configured; using the shell env (source .env.example first)")
+    print()
+    print("Local processes:")
+    for service in ALL_LOCAL_SERVICES:
+        pid = read_pid(service)
+        alive = bool(pid and pid_alive(pid))
+        port = PYTHON_SERVICES.get(service, {}).get("port") if service != UI_SERVICE else 3000
+        health_url = PYTHON_SERVICES.get(service, {}).get("health_url") if service != UI_SERVICE else "http://localhost:3000"
+        port_state = f"port {port} open={port_open(port)}" if isinstance(port, int) else "port n/a"
+        health_state = ""
+        if isinstance(health_url, str):
+            health_state = f" health={wait_http(service, health_url, 1)}"
+        print(f"  {service}: pid={pid or '-'} alive={alive} {port_state}{health_state}")
+
+    print("\nMilvus infra:")
+    print(
+        f"  endpoint localhost:{MILVUS_GRPC_PORT} "
+        f"open={port_open(MILVUS_GRPC_PORT)} health={wait_http('milvus', MILVUS_HEALTH_URL, 1)}"
+    )
+    subprocess.run(["docker", "compose", "-f", "docker-compose.yaml", "ps", *INFRA_SERVICES], cwd=REPO_ROOT)
+
+
+def logs(args: argparse.Namespace) -> None:
+    ensure_dirs()
+    services = [args.service] if args.service else list(ALL_LOCAL_SERVICES)
+    for service in services:
+        print(f"\n=== {service} ({log_file(service).relative_to(REPO_ROOT)}) ===")
+        print(last_log_lines(service, args.lines))
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Run Retail Shopping Assistant locally.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    configure_parser = subparsers.add_parser("configure", help="Write local model endpoint env for a remote model host.")
+    configure_parser.add_argument("--model-host", help="Remote model host URL, for example http://MODEL_HOST")
+    configure_parser.set_defaults(func=configure)
+
+    install_dev_parser = subparsers.add_parser("install-dev", help="Create a repo-local Python dev venv and install test/dev packages.")
+    install_dev_parser.add_argument(
+        "--include-integration",
+        action="store_true",
+        help="Also install tests/requirements.txt for integration scripts.",
+    )
+    install_dev_parser.set_defaults(func=install_dev)
+
+    start_parser = subparsers.add_parser("start", help="Start local app services plus local Milvus infra.")
+    start_parser.add_argument("--model-host", help="Remote model host URL. Rewrites local model endpoint env before starting.")
+    start_parser.add_argument("--skip-install", action="store_true", help="Do not install Python or UI dependencies.")
+    start_parser.add_argument("--catalog-timeout", type=int, default=600, help="Seconds to wait for catalog startup.")
+    start_parser.set_defaults(func=start)
+
+    stop_parser = subparsers.add_parser("stop", help="Stop tracked local services and local Milvus infra.")
+    stop_parser.set_defaults(func=stop)
+
+    status_parser = subparsers.add_parser("status", help="Show process, port, health, and infra status.")
+    status_parser.set_defaults(func=status)
+
+    logs_parser = subparsers.add_parser("logs", help="Show recent local service logs.")
+    logs_parser.add_argument("--service", choices=ALL_LOCAL_SERVICES, help="Limit logs to one service.")
+    logs_parser.add_argument("--lines", type=int, default=80, help="Number of log lines to show.")
+    logs_parser.set_defaults(func=logs)
+
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+    ensure_dirs()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

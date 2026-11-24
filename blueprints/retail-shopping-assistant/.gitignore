@@ -1,0 +1,95 @@
+# Local/private configuration files
+**/config-nvidia-local.yaml
+**/config-local.yaml
+
+catalog_retriever/volumes
+tests/conversations
+.local-run/
+node_modules/
+**/node_modules/
+guardrails/traces/
+ui/public/images
+
+# Memory retriever runtime SQLite database (created at module import time)
+**/context.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+**/.ipynb_checkpoints/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+tests/.coverage
+tests/htmlcov/
+tests/.pytest_cache/
+tests/integration/conversations/**/results*/
+tests/integration/conversations/**/quality/
+tests/integration/conversations/**/quality_progress/
+tests/integration/conversations/**/judge/
+tests/evaluation/results/*
+!tests/evaluation/results/.gitkeep
+# Notebook 5's measurements; results are not published
+notebook/stress_results/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.local-models.example
+
+# Next.js build output (the UI is CRA; this appears from stray tooling runs)
+ui/.next/
+
+# Spare catalog snapshots kept locally for comparison; never shipped.
+shared/data/enriched_products_0805.jsonl
+shared/data/enriched_products_old.jsonl
+
+# Working notes written while tracing a run. Read alongside the code they
+# describe and superseded by the next run, so they are kept locally.
+docs/reports/
+
+# Conversations copied out of the database before it was reset. They left the
+# database; they should not arrive in the repository instead.
+debug_archive/

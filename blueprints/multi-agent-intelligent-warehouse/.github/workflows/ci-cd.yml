@@ -1,0 +1,331 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+  # Release-candidate evidence: run on the candidate commit with the version
+  # being prepared, so its SBOMs are stamped with it (docs/operations/RELEASING.md).
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version for the SBOMs, e.g. 2.1.2 (empty: tag or development version)"
+        required: false
+        type: string
+
+jobs:
+  # =============================================================================
+  # Code Quality & Testing
+  # =============================================================================
+  test:
+    name: Test & Quality Checks
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: warehouse
+          POSTGRES_PASSWORD: ci_placeholder
+          POSTGRES_DB: warehouse
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U warehouse -d warehouse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    strategy:
+      matrix:
+        python-version: [3.11]
+        node-version: [22]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Set up Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: src/ui/web/package-lock.json
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio pytest-timeout black
+        pip install "cyclonedx-python-lib[json-validation]==11.12.0"  # SBOM validator tests
+        pip install -e packages/maiw-mcp
+        pip install -e packages/maiw-state
+        pip install -e packages/maiw-decision
+        pip install -e packages/maiw-models
+        pip install -e packages/maiw-skills
+        pip install -e packages/maiw-execution
+        pip install -e "packages/maiw-agents[deep-agents]"
+        pip install -e packages/maiw-contracts
+        pip install -e packages/maiw-world
+        pip install -e apps/api
+        pip install httpx
+    
+    - name: Install Node.js dependencies
+      run: |
+        cd src/ui/web
+        npm ci
+    
+    - name: Run Python formatting check (tests)
+      run: black --check tests
+    
+    - name: Run Node.js linting
+      run: |
+        cd src/ui/web
+        npm run lint
+
+    - name: Run TypeScript typecheck
+      run: |
+        cd src/ui/web
+        npx tsc --noEmit
+    
+    - name: Run Python tests
+      env:
+        DATABASE_URL: postgresql://warehouse:ci_placeholder@localhost:5435/warehouse
+      run: |
+        # CORE CI: unit + contract + mcp + api — no infrastructure required. Integration/e2e live in main.yml.
+        # Canonical command matches docs/architecture/TEST_STRATEGY.md CORE CI definition.
+        pytest tests/unit tests/contract tests/mcp tests/api packages/maiw-agents/tests \
+          apps/api/tests apps/api/maiw_api/demo/tests tests/demo \
+          --timeout=120 \
+          --ignore=tests/unit/test_mcp_integrated_planner_graph.py \
+          --ignore=tests/unit/test_mcp_system.py \
+          --ignore=tests/unit/test_guardrails_sdk.py \
+          --ignore=tests/unit/test_guardrails.py \
+          --ignore=tests/unit/test_all_agents.py \
+          --ignore=tests/unit/test_basic.py \
+          --ignore=tests/unit/test_db_connection.py \
+          --ignore=tests/unit/test_enhanced_retrieval.py \
+          --ignore=tests/unit/test_mcp_planner_integration.py \
+          --ignore=tests/unit/test_document_pipeline.py \
+          --ignore=tests/unit/test_document_action_tools.py \
+          --ignore=tests/unit/test_nvidia_integration.py \
+          --ignore=tests/unit/test_nvidia_llm.py \
+          --ignore=tests/unit/test_chunking_demo.py \
+          --ignore=tests/unit/test_caching_demo.py \
+          --ignore=tests/unit/test_response_quality_demo.py \
+          --ignore=tests/unit/test_evidence_scoring_demo.py \
+          --ignore=tests/unit/test_embedding.py \
+          --ignore=tests/unit/test_reasoning_evaluation.py \
+          --ignore=tests/unit/test_prompt_injection_protection.py \
+          --ignore=tests/unit/test_prompt_injection_simple.py \
+          --cov=src --cov=apps --cov=packages \
+          --cov-fail-under=48 \
+          --cov-report=xml \
+          --cov-report=term-missing
+    
+    # A separate invocation: packages/maiw-world/tests is a package named
+    # "tests", which collides with the repository's tests/ package when both
+    # are collected in one pytest process (docs/architecture/TEST_STRATEGY.md).
+    - name: Run maiw-world package tests
+      run: pytest packages/maiw-world/tests --timeout=120
+
+    - name: Run Node.js tests
+      run: |
+        cd src/ui/web
+        # Coverage disabled: babel-plugin-istanbul + test-exclude breaks under current Jest/Node (see package upgrades backlog).
+        npm test -- --watchAll=false
+    
+    # Consumed by the SonarQube Analysis workflow (.github/workflows/sonarqube.yml),
+    # which runs after this workflow and analyzes the same commit.
+    - name: Upload coverage for SonarQube
+      uses: actions/upload-artifact@v4
+      with:
+        name: sonar-coverage
+        path: coverage.xml
+        if-no-files-found: error
+        retention-days: 7
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v7
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # =============================================================================
+  # Security Scanning
+  # =============================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+    
+    # Pinned to the commit of the signed v0.36.0 tag (Trivy v0.70.0), not a
+    # mutable branch or tag. Both scans include lockfile devDependencies,
+    # which Trivy skips by default: the root lockfile is commit and release
+    # tooling only, and that tooling runs in CI and release jobs.
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      env:
+        TRIVY_INCLUDE_DEV_DEPS: 'true'
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    # Fail on any fixable CRITICAL finding. The full report (every severity)
+    # is uploaded above to code scanning. HIGH stays report-only here while
+    # the repository finding in docs/security/IMAGE_SCANNING.md remains
+    # (react-scripts' uuid); the image jobs gate HIGH.
+    - name: Trivy gate (fixable CRITICAL)
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      env:
+        TRIVY_INCLUDE_DEV_DEPS: 'true'
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        severity: 'CRITICAL'
+        ignore-unfixed: true
+        exit-code: '1'
+        skip-setup-trivy: true
+
+  # =============================================================================
+  # Container image scanning
+  # =============================================================================
+  # The filesystem scan above reads lockfiles and requirements; it does not
+  # see what the shipped images contain (OS packages, base-image nginx,
+  # setuptools' vendored packages). Build the three images MAIW ships and scan
+  # them. Baseline and triage: docs/security/IMAGE_SCANNING.md.
+  image-scan:
+    name: Image Scan (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: backend
+            dockerfile: Dockerfile.backend
+            sbom-min-components: 100
+            build-args: ""
+          - image: frontend
+            dockerfile: Dockerfile.frontend
+            sbom-min-components: 20
+            build-args: ""
+          # The four MCP domain images differ only in the server code copied
+          # in; their packages are identical.
+          - image: mcp
+            dockerfile: Dockerfile.mcp
+            sbom-min-components: 60
+            build-args: "--build-arg MCP_DOMAIN=equipment"
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0  # release tag for the SBOM version
+
+    - name: Build image
+      run: |
+        docker build --pull ${{ matrix.build-args }} -f ${{ matrix.dockerfile }} -t maiw-${{ matrix.image }}:scan .
+        mkdir -p sbom
+
+    # CycloneDX SBOM of the image (docs/security/sbom-generation.md). The
+    # frontend job also covers the UI's production npm dependencies, which
+    # are compiled into its static bundle where an image scan cannot see them.
+    - name: Generate SBOM
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: 'image'
+        image-ref: 'maiw-${{ matrix.image }}:scan'
+        format: 'cyclonedx'
+        output: 'sbom/maiw-${{ matrix.image }}.cdx.json'
+
+    - name: Generate UI bundle SBOM
+      if: matrix.image == 'frontend'
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: 'fs'
+        scan-ref: 'src/ui/web/package-lock.json'
+        format: 'cyclonedx'
+        output: 'sbom/maiw-ui-bundle.cdx.json'
+        skip-setup-trivy: true
+
+    - name: Validate SBOM
+      env:
+        MAIW_RELEASE_VERSION: ${{ inputs.release_version }}
+      run: |
+        python3 -m pip install --quiet "cyclonedx-python-lib[json-validation]==11.12.0"
+        version="$(scripts/security/release_version.sh)"
+        echo "SBOM release version: ${version}"
+        image_id="$(docker image inspect --format '{{.Id}}' maiw-${{ matrix.image }}:scan)"
+        python3 scripts/security/validate_sbom.py sbom/maiw-${{ matrix.image }}.cdx.json \
+          --artifact maiw-${{ matrix.image }} --git-sha "$GITHUB_SHA" --version "$version" \
+          --artifact-digest "$image_id" --min-components "${{ matrix.sbom-min-components }}"
+        if [ -f sbom/maiw-ui-bundle.cdx.json ]; then
+          python3 scripts/security/validate_sbom.py sbom/maiw-ui-bundle.cdx.json \
+            --artifact maiw-ui-bundle --git-sha "$GITHUB_SHA" --version "$version" --min-components 50
+        fi
+
+    - name: Upload SBOM
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom-${{ matrix.image }}
+        path: sbom/
+        if-no-files-found: error
+        retention-days: 90
+
+    # Every severity, uploaded to code scanning under its own category.
+    - name: Scan image
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: 'image'
+        image-ref: 'maiw-${{ matrix.image }}:scan'
+        scanners: 'vuln'
+        format: 'sarif'
+        output: 'trivy-image-${{ matrix.image }}.sarif'
+
+    - name: Upload image scan results
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: 'trivy-image-${{ matrix.image }}.sarif'
+        category: 'trivy-image-${{ matrix.image }}'
+
+    # Fail on any fixable HIGH or CRITICAL finding. The shipped images had
+    # none at the baseline (docs/security/IMAGE_SCANNING.md), so this keeps
+    # that true. Unfixed findings (no released fix) are in the upload above.
+    - name: Image gate (fixable HIGH and CRITICAL)
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: 'image'
+        image-ref: 'maiw-${{ matrix.image }}:scan'
+        scanners: 'vuln'
+        format: 'table'
+        severity: 'HIGH,CRITICAL'
+        ignore-unfixed: true
+        exit-code: '1'
+        skip-setup-trivy: true

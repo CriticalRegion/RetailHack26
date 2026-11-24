@@ -1,0 +1,225 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Repository-wide pytest configuration for the offline unit test suite.
+
+Goals
+-----
+- Make service source packages importable without bringing up Docker or any
+  live backend. Each service lives in ``<service>/src/`` and is importable as
+  ``<service>.src.<module>`` once the repo root is on ``sys.path``.
+- Provide shared fixtures (``base_config``, ``mocked_openai`` etc.) that all
+  suites can depend on without knowing service-specific wiring.
+- Ensure every service module that reads API keys at import time finds
+  harmless placeholder values so tests can import them directly.
+"""
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+import sys
+from functools import lru_cache
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
+# Ensure the repo root is importable so tests can `import orchestrator.src...`.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+
+# Several service modules read API keys at import time. Set harmless defaults
+# before any test imports them so we never trip on KeyError during collection.
+for _key in ("LLM_API_KEY", "EMBED_API_KEY", "RAIL_API_KEY", "NVIDIA_API_KEY", "VLM_API_KEY"):
+    os.environ.setdefault(_key, f"test-{_key.lower()}")
+os.environ.setdefault("SHARED_CONFIG_ROOT", str(REPO_ROOT / "shared" / "configs"))
+
+
+@lru_cache(maxsize=1)
+def _env_example_model_endpoints() -> tuple[tuple[str, str], ...]:
+    """Every *_BASE_URL and *_MODEL a clean shell gets from .env.example."""
+
+    result = subprocess.run(
+        ["bash", "-c", "set -a && . ./.env.example && env -0"],
+        cwd=REPO_ROOT,
+        env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", "")},
+        capture_output=True,
+        check=True,
+    )
+    pairs = (item.split("=", 1) for item in result.stdout.decode().split("\0") if "=" in item)
+    return tuple(
+        (key, value) for key, value in pairs if re.search(r"_(BASE_URL|MODEL)$", key)
+    )
+
+
+@pytest.fixture
+def model_endpoint_env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """Set the model URLs and names exactly as .env.example ships them."""
+
+    for key, value in _env_example_model_endpoints():
+        monkeypatch.setenv(key, value)
+    return monkeypatch
+
+
+@pytest.fixture
+def base_config() -> SimpleNamespace:
+    """Return a valid orchestrator-shaped config object.
+
+    Agent classes in ``orchestrator`` accept any object with matching
+    attributes; using ``SimpleNamespace`` keeps the fixture decoupled from
+    the concrete ``OrchestratorConfig`` pydantic model so we can test agents
+    in isolation.
+    """
+    return SimpleNamespace(
+        llm_port="http://localhost:8000/v1",
+        llm_name="test-model",
+        llm_api_key_env="LLM_API_KEY",
+        llm_api_key_required=False,
+        retriever_port="http://localhost:8010",
+        memory_port="http://localhost:8011",
+        guardrails_url="http://localhost:8012",
+        memory_length=16384,
+        top_k_retrieve=4,
+        deepagents_recursion_limit=24,
+        deepagents_execution_timeout_seconds=45.0,
+        grounding_editor_reserve_seconds=15.0,
+        max_catalog_searches_per_turn=3,
+        max_product_detail_reads_per_turn=2,
+        grounding_rewrite_enabled=True,
+        grounding_rewrite_max_evidence_chars=12000,
+        llm_temperature=0.0,
+        llm_max_output_tokens=1024,
+        grounding_editor_max_output_tokens=512,
+        expose_agent_diagnostics=False,
+        catalog_search_timeout_seconds=None,
+        multimodal=True,
+        media_input=SimpleNamespace(
+            enabled=True,
+            allow_mixed_media=True,
+            max_images_per_turn=1,
+            max_videos_per_turn=1,
+            image_mime_types=["image/jpeg", "image/png"],
+            video_mime_types=["video/mp4"],
+            max_image_bytes=10 * 1024 * 1024,
+            max_video_bytes=50 * 1024 * 1024,
+            max_video_duration_seconds=120,
+        ),
+        vlm_enabled=True,
+        vlm_port="http://localhost:8006/v1",
+        vlm_name="test-vlm",
+        vlm_api_key_env="VLM_API_KEY",
+        vlm_api_key_required=True,
+        guardrails_available=True,
+        guardrails_enabled=True,
+        guardrails_client_can_disable=True,
+        guardrails_failure_mode="closed",
+        guardrails_timeout_seconds=15.0,
+        guardrails_speculative_main_model_enabled=False,
+        guardrails_supported_modalities=["text", "image", "video"],
+        unsafe_message="Sorry, I can only help with shopping questions.",
+        guardrails_unavailable_message=(
+            "I cannot safely validate this request right now. Please retry. "
+            "If it involved a cart change, check your cart first."
+        ),
+    )
+
+
+@pytest.fixture
+def valid_config_dict() -> dict[str, Any]:
+    """Dict counterpart of :func:`base_config` for testing pydantic validation."""
+    return {
+        "llm_port": "http://localhost:8000/v1",
+        "llm_name": "test-model",
+        "llm_api_key_env": "LLM_API_KEY",
+        "llm_api_key_required": False,
+        "retriever_port": "http://localhost:8010",
+        "memory_port": "http://localhost:8011",
+        "guardrails_url": "http://localhost:8012",
+        "memory_length": 16384,
+        "top_k_retrieve": 4,
+        "deepagents_recursion_limit": 24,
+        "deepagents_execution_timeout_seconds": 45.0,
+        "grounding_editor_reserve_seconds": 15.0,
+        "max_catalog_searches_per_turn": 3,
+        "max_product_detail_reads_per_turn": 2,
+        "grounding_rewrite_enabled": True,
+        "grounding_rewrite_max_evidence_chars": 12000,
+        "expose_agent_diagnostics": False,
+        "catalog_search_timeout_seconds": None,
+        "multimodal": True,
+        "guardrails_enabled": True,
+        "guardrails_failure_mode": "closed",
+        "unsafe_message": "Sorry, I can only help with shopping questions.",
+    }
+
+
+class FakeResponse:
+    """Minimal stand-in for ``requests.Response`` used by service tests.
+
+    Providing a tiny shim here (rather than in each test file) keeps the
+    service tests readable and avoids subtle coupling to the ``requests``
+    implementation. Supports the subset of the interface exercised by the
+    orchestrator agents: ``status_code``, ``text``, ``json``,
+    ``raise_for_status``.
+    """
+
+    def __init__(
+        self,
+        json_data: Any = None,
+        status_code: int = 200,
+        text: str | None = None,
+    ) -> None:
+        self._json = json_data if json_data is not None else {}
+        self.status_code = status_code
+        self.text = text if text is not None else __import__("json").dumps(self._json)
+
+    def json(self) -> Any:
+        return self._json
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise __import__("requests").exceptions.HTTPError(
+                f"HTTP {self.status_code}"
+            )
+
+
+@pytest.fixture
+def fake_response_cls() -> type:
+    """Expose ``FakeResponse`` to tests as a fixture-friendly handle."""
+    return FakeResponse
+
+
+@pytest.fixture
+def make_openai_chat_response():
+    """Factory for a fake OpenAI chat completion response.
+
+    The OpenAI client used across agents consumes
+    ``response.choices[0].message`` (content + optional tool_calls). This
+    fixture builds that nested structure from primitive inputs so tests don't
+    repeat the ceremony.
+    """
+
+    def _build(
+        content: str | None = None,
+        tool_name: str | None = None,
+        tool_arguments: str | None = None,
+    ) -> SimpleNamespace:
+        tool_calls = None
+        if tool_name is not None:
+            tool_calls = [
+                SimpleNamespace(
+                    function=SimpleNamespace(
+                        name=tool_name,
+                        arguments=tool_arguments or "{}",
+                    )
+                )
+            ]
+        message = SimpleNamespace(content=content, tool_calls=tool_calls)
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    return _build

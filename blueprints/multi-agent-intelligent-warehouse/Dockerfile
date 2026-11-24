@@ -1,0 +1,124 @@
+# Multi-stage Dockerfile for Warehouse Operational Assistant
+# This Dockerfile builds both frontend and backend with version injection
+
+# =============================================================================
+# Frontend Build Stage
+# =============================================================================
+# Same Node image as Dockerfile.frontend's build stage, which CI builds and
+# scans; keep the two in step. Node 20 reached end of life in April 2026.
+FROM node:22.23.5-alpine3.24@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS frontend-builder
+
+WORKDIR /app/src/ui/web
+
+# Copy package files (include .npmrc so npm ci matches lockfile; legacy-peer-deps)
+COPY src/ui/web/package*.json ./
+COPY src/ui/web/.npmrc ./
+
+# Install dependencies (including devDependencies for build)
+RUN npm ci
+
+# Copy frontend source
+COPY src/ui/web/ ./
+
+# Build arguments for version injection
+ARG VERSION=0.0.0
+ARG GIT_SHA=unknown
+ARG BUILD_TIME=unknown
+
+# Set environment variables for build
+ENV REACT_APP_VERSION=$VERSION
+ENV REACT_APP_GIT_SHA=$GIT_SHA
+ENV REACT_APP_BUILD_TIME=$BUILD_TIME
+# CI=true treats ESLint warnings as errors; lint runs in CI test job, not here
+ENV DISABLE_ESLINT_PLUGIN=true
+
+# Build the frontend
+RUN npm run build
+
+# =============================================================================
+# Backend Dependencies Stage
+# =============================================================================
+# Same Python image as Dockerfile.mcp, pinned by tag + digest (it was the
+# floating python:3.11-slim). The final stage copies site-packages from
+# /usr/local/lib/python3.11, so a Python minor change must update that path.
+FROM python:3.11.18-slim-trixie@sha256:07d4824036af339fa1b6ef769cc99d9c10a141769538b52b3b597c84f7a7b535 AS backend-deps
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    g++ \
+    gcc \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.docker.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install local MAIW packages
+COPY packages/ ./packages/
+RUN pip install --no-cache-dir \
+    packages/maiw-mcp \
+    packages/maiw-state \
+    packages/maiw-decision \
+    packages/maiw-models \
+    packages/maiw-skills
+
+# =============================================================================
+# Final Runtime Stage
+# =============================================================================
+FROM python:3.11.18-slim-trixie@sha256:07d4824036af339fa1b6ef769cc99d9c10a141769538b52b3b597c84f7a7b535 AS final
+
+# Set working directory
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python dependencies from backend-deps stage
+COPY --from=backend-deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=backend-deps /usr/local/bin /usr/local/bin
+
+# Copy application code (explicitly copy only necessary directories)
+# Security: Explicitly copy only required source code to prevent sensitive data exposure
+# .dockerignore provides additional protection as a defense-in-depth measure
+COPY src/ ./src/
+# Copy guardrails configuration (required for NeMo Guardrails)
+COPY data/config/guardrails/ ./data/config/guardrails/
+
+# Build arguments for version injection
+ARG VERSION=0.0.0
+ARG GIT_SHA=unknown
+ARG BUILD_TIME=unknown
+
+# Set environment variables
+ENV VERSION=$VERSION
+ENV GIT_SHA=$GIT_SHA
+ENV BUILD_TIME=$BUILD_TIME
+ENV DOCKER_IMAGE=warehouse-assistant:$VERSION
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Copy frontend build from frontend-builder stage
+COPY --from=frontend-builder /app/src/ui/web/build ./src/ui/web/build
+
+# Create non-root user for security
+RUN groupadd -r appuser && \
+    useradd -r -g appuser appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8001/api/v1/health || exit 1
+
+# Expose port
+EXPOSE 8001
+
+# Start command
+CMD ["uvicorn", "maiw_api.app:app", "--host", "0.0.0.0", "--port", "8001"]

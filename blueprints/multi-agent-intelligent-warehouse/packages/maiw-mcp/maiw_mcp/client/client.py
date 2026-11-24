@@ -1,0 +1,432 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+"""
+Official MCP v2 capability client (mcp 2.0.0, protocol 2026-07-28).
+
+Wraps ``mcp.client.Client`` — the high-level MCP v2 client.
+Skills and agents call ``MAIWMCPClient.invoke()`` with a semantic capability
+name and a payload dict.  Transport details and server URLs are fully hidden.
+
+Production transport: Streamable HTTP (stateless — no session affinity needed)
+Test transport: In-memory (pass MCPServer instance via CapabilityRegistry)
+
+Architecture
+------------
+    Skill
+      ↓
+    MAIWMCPClient.invoke("warehouse.inventory.get", payload)
+      ↓
+    CapabilityRegistry.resolve()  →  server URL
+      ↓
+    mcp.client.Client(server_url)     ← official MCP v2 Client
+      ↓
+    client.call_tool("warehouse.inventory.get", payload)
+      ↓
+    [MCP 2026-07-28 over Streamable HTTP]
+      ↓
+    MCPServer (mcp_servers/inventory/server.py)
+
+MCP v1 → v2 migration notes
+----------------------------
+Removed:
+    - streamablehttp_client (renamed + superseded by Client)
+    - ClientSession (superseded by Client)
+    - session.initialize() handshake (handled internally by Client)
+    - create_connected_server_and_client_session (use Client(server) instead)
+
+Renamed:
+    - result.isError  →  result.is_error
+    - tool.inputSchema  →  tool.input_schema
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+from importlib.metadata import version as pkg_version
+from typing import Any
+
+from mcp import types
+from mcp.client import Client
+
+from maiw_mcp.circuit_breaker import CircuitOpen
+from maiw_mcp.circuit_registry import DomainCircuitRegistry
+from maiw_mcp.deadline import RequestDeadline, RequestDeadlineExceeded
+from maiw_mcp.errors import (
+    BackendUnavailable,
+    CapabilityNotFound,
+    MCPCircuitOpen,
+    MCPConnectFailed,
+    MCPConnectTimeout,
+    MCPContractError,
+    MCPResponseLost,
+    MCPResultOutcomeUnknown,
+    MCPTimeout,
+    MCPTimeoutAfterDispatch,
+    MCPToolError,
+    MCPToolErrorOutcomeUnknown,
+    MCPToolNotApplied,
+    MCPUnavailable,
+)
+from maiw_mcp.registry.registry import CapabilityRegistry
+from maiw_mcp.write_disposition import (
+    EXECUTION_DISPOSITION_FIELD,
+    certifies_not_applied,
+    certifies_not_applied_result,
+    describe_disposition,
+)
+from maiw_mcp.telemetry.telemetry import CapabilityTelemetry
+
+logger = logging.getLogger(__name__)
+
+_MCP_SDK_VERSION = pkg_version("mcp")
+
+
+class MAIWMCPClient:
+    """
+    Capability client using the official MCP v2 Python SDK.
+
+    One ``invoke()`` call opens a connection via ``mcp.client.Client``,
+    calls the tool, then closes the connection.  The ``Client`` handles
+    the full MCP 2026-07-28 lifecycle internally — no manual initialize
+    handshake, no persistent session management required.
+
+    Production connections are stateless: ``Client(url)`` works behind
+    any load balancer or Kubernetes service without session affinity.
+
+    Parameters
+    ----------
+    registry:
+        Maps capability names to server URLs.
+    telemetry:
+        Emits structured JSON log per call.  Defaults to a no-op instance.
+    """
+
+    def __init__(
+        self,
+        registry: CapabilityRegistry,
+        *,
+        telemetry: CapabilityTelemetry | None = None,
+        circuit_registry: DomainCircuitRegistry | None = None,
+    ) -> None:
+        self._registry = registry
+        self._telemetry = telemetry or CapabilityTelemetry()
+        self._circuit_registry = circuit_registry
+
+    async def invoke(
+        self,
+        capability: str,
+        payload: dict[str, Any],
+        *,
+        trace_id: str | None = None,
+        timeout_seconds: float = 30.0,
+        deadline: RequestDeadline | None = None,
+    ) -> dict[str, Any]:
+        """
+        Invoke a warehouse capability via the MCP 2026-07-28 protocol.
+
+        Parameters
+        ----------
+        capability:
+            Semantic name, e.g. ``"warehouse.inventory.get"``.
+        payload:
+            Validated request dict (use ``request.model_dump(exclude_none=True)``).
+        trace_id:
+            Correlation ID propagated from ModelGateway / agent span.
+        timeout_seconds:
+            Client-side read timeout per round trip.  When a *deadline* is
+            supplied this becomes the upper bound for the local operation;
+            the effective timeout is ``min(timeout_seconds, remaining_budget)``.
+        deadline:
+            Parent request deadline.  When supplied and already expired,
+            raises ``RequestDeadlineExceeded`` before any network call.
+            When the remaining budget is smaller than ``timeout_seconds``,
+            the tighter value is used.
+
+        Returns
+        -------
+        dict
+            Parsed JSON result from the MCP tool.
+
+        Raises
+        ------
+        RequestDeadlineExceeded
+            Parent request deadline was already exhausted before the call.
+        CapabilityNotFound
+            No server registered for this capability.
+        MCPTimeout
+            Server did not respond within the effective timeout (parent budget
+            still existed at call time; the child operation simply ran long).
+        MCPToolNotApplied
+            Server returned ``is_error=True`` AND certified, in
+            ``structuredContent``, that it rejected the request before any
+            mutation: the strict canonical payload of
+            ``maiw_mcp.write_disposition.certifies_not_applied`` (round 4;
+            strict since the final pre-merge cleanup, NEW5-P2-01).
+        MCPToolErrorOutcomeUnknown
+            Server returned ``is_error=True`` without that certification — the
+            tool may have mutated before failing; for a write the outcome is
+            UNKNOWN (round 4, NEW4-P1-01).  Both subclass ``MCPToolError``.
+        MCPResultOutcomeUnknown
+            A NON-error result carries a non-null ``execution_disposition``
+            that is not a trusted NOT_APPLIED (``certifies_not_applied_result``)
+            — the result contradicts itself → UNKNOWN (NEW5-P2-01).
+        MCPContractError
+            Tool result could not be parsed as JSON or was not a dict.
+        MCPUnavailable
+            Transport-level or protocol-level error.
+
+        v2.0.1 round 3 — every transport failure carries its dispatch phase:
+        ``MCPConnectFailed`` / ``MCPConnectTimeout`` / ``MCPCircuitOpen``
+        (``MCPNotDispatched``: ``tools/call`` provably never sent) or
+        ``MCPResponseLost`` / ``MCPTimeoutAfterDispatch``
+        (``MCPDispatchOutcomeUnknown``: sent, response lost — for a write the
+        outcome is UNKNOWN).  There is no retry here.
+        """
+        # Deadline guard — reject before any network call
+        if deadline is not None:
+            effective_timeout = deadline.effective_timeout(timeout_seconds)
+        else:
+            effective_timeout = timeout_seconds
+
+        # Circuit breaker — extract domain from "warehouse.<domain>.<action>"
+        parts = capability.split(".")
+        domain = parts[1] if len(parts) >= 3 else "unknown"
+        breaker = self._circuit_registry.get(domain) if self._circuit_registry else None
+
+        server_url = self._registry.resolve(capability)
+        # Telemetry fields must be plain strings — MCPServer instances are not
+        # serialisable via dataclasses.asdict() (deepcopy fails on SSL objects).
+        server_label = (
+            server_url if isinstance(server_url, str) else type(server_url).__name__
+        )
+        start = time.monotonic()
+
+        async def _do_call() -> dict:
+            return await self._call_tool(
+                capability, payload, server_url, effective_timeout
+            )
+
+        try:
+            if breaker is not None:
+                # CircuitOpen is raised by breaker.call() when circuit is OPEN.
+                # All exceptions from _do_call() trip the circuit failure counter —
+                # including MCPTimeout and MCPUnavailable (infrastructure failures)
+                # as well as MCPToolError (server responded with error). This is an
+                # intentional tradeoff: consistent server-side errors also indicate
+                # degradation worth tracking.
+                result = await breaker.call(_do_call())
+            else:
+                result = await _do_call()
+        except CircuitOpen as exc:
+            # Translate to MCPUnavailable so callers see a uniform error type.
+            # CircuitOpen is also added to _raise_typed_http → 503 in demo.py.
+            raise MCPCircuitOpen(
+                f"Circuit OPEN for MCP domain {domain!r} — "
+                f"cooldown {exc.cooldown_remaining_s:.1f}s remaining"
+            ) from exc
+        except RequestDeadlineExceeded:
+            raise  # parent budget exhausted — not MCPTimeout
+        except (CapabilityNotFound, MCPToolError, MCPContractError, BackendUnavailable):
+            raise
+        except MCPUnavailable:
+            raise
+        except MCPTimeout:
+            raise
+        except TimeoutError as exc:
+            # Not reachable from _call_tool (it classifies its own timeouts);
+            # only a timeout before the call started lands here.
+            latency_ms = (time.monotonic() - start) * 1000
+            self._telemetry.record_failure(
+                capability=capability,
+                server_url=server_label,
+                latency_ms=latency_ms,
+                error=exc,
+                trace_id=trace_id,
+            )
+            raise MCPConnectTimeout(
+                f"Timeout after {effective_timeout:.1f}s calling {capability!r}"
+            ) from exc
+        except Exception as exc:
+            # _call_tool classifies every failure after it starts; anything
+            # else happened before a request could be sent.
+            latency_ms = (time.monotonic() - start) * 1000
+            self._telemetry.record_failure(
+                capability=capability,
+                server_url=server_label,
+                latency_ms=latency_ms,
+                error=exc,
+                trace_id=trace_id,
+            )
+            raise MCPConnectFailed(
+                f"MCP invocation failed for {capability!r}: {type(exc).__name__}: {exc}"
+            ) from exc
+
+        latency_ms = (time.monotonic() - start) * 1000
+        self._telemetry.record_success(
+            capability=capability,
+            server_url=server_label,
+            latency_ms=latency_ms,
+            trace_id=trace_id,
+        )
+        return result
+
+    async def _call_tool(
+        self,
+        capability: str,
+        payload: dict[str, Any],
+        server_url: str,
+        timeout_seconds: float,
+    ) -> dict[str, Any]:
+        # mcp.client.Client handles the full MCP lifecycle:
+        # - connection (Streamable HTTP for string URLs, in-memory for MCPServer instances)
+        # - initialize handshake
+        # - tools/call request
+        # - session teardown
+        #
+        # v2.0.1 round 3 (NEW3-P1-02): the phase of a failure decides what it
+        # means.  "connect" (transport + handshake) → the tool request was never
+        # sent → MCPConnectFailed / MCPConnectTimeout (definitely not executed).
+        # "dispatched" (tools/call in flight) → the server may have applied the
+        # write and the response was lost → MCPResponseLost /
+        # MCPTimeoutAfterDispatch (outcome UNKNOWN; never "failed").
+        # Result received (call_result set) → a teardown error after the
+        # result arrived is logged and the result is returned (it must not be
+        # turned into a failure).
+        phase = "connect"
+        call_result: types.CallToolResult | None = None
+        try:
+            async with Client(
+                server_url, read_timeout_seconds=timeout_seconds
+            ) as client:
+                phase = "dispatched"
+                call_result = await client.call_tool(capability, payload)
+        except Exception as exc:  # noqa: BLE001 — classified by phase below
+            if call_result is not None:
+                logger.warning(
+                    "MCP session teardown failed after %r returned (%s: %s); "
+                    "using the received result",
+                    capability,
+                    type(exc).__name__,
+                    exc,
+                )
+            elif phase == "connect":
+                if _is_timeout(exc):
+                    raise MCPConnectTimeout(
+                        f"Timeout after {timeout_seconds:.1f}s connecting for "
+                        f"{capability!r}; tools/call was not sent"
+                    ) from exc
+                raise MCPConnectFailed(
+                    f"MCP connection failed for {capability!r} before tools/call "
+                    f"was sent: {type(exc).__name__}: {exc}"
+                ) from exc
+            else:
+                if _is_timeout(exc):
+                    raise MCPTimeoutAfterDispatch(
+                        f"Timeout after {timeout_seconds:.1f}s waiting for "
+                        f"{capability!r}; tools/call was dispatched — outcome unknown"
+                    ) from exc
+                raise MCPResponseLost(
+                    f"MCP response lost for {capability!r} after tools/call was "
+                    f"dispatched — outcome unknown: {type(exc).__name__}: {exc}"
+                ) from exc
+        assert call_result is not None
+
+        if call_result.is_error:
+            # v2.0.1 round 4 (NEW4-P1-01): tools/call reached the server, so an
+            # error result is NOT proof of non-execution.  Only the explicit
+            # structured disposition NOT_APPLIED is (maiw_mcp.write_disposition);
+            # text, isError alone, or a malformed / unknown disposition → the
+            # outcome is unknown.
+            error_text = self._extract_text(call_result)
+            structured = call_result.structured_content
+            if certifies_not_applied(structured):
+                raise MCPToolNotApplied(
+                    f"{capability!r} rejected before any mutation "
+                    f"(execution_disposition=NOT_APPLIED): {error_text}",
+                    rejection_code=structured["rejection_code"],
+                )
+            observed = describe_disposition(structured)
+            raise MCPToolErrorOutcomeUnknown(
+                f"{capability!r} returned a tool error after tools/call was "
+                f"dispatched without a NOT_APPLIED disposition ({observed}) — "
+                f"outcome unknown: {error_text}",
+                observed_disposition=observed,
+            )
+
+        parsed = self._parse_result(call_result)
+        # Final pre-merge (NEW5-P2-01): a non-error result that carries an
+        # execution disposition must be a fully consistent NOT_APPLIED
+        # certification; a contradicted, malformed or unknown one makes the
+        # whole result untrustworthy (it is checked HERE, on the raw result,
+        # because contract validation downstream drops unknown fields).
+        if parsed.get(EXECUTION_DISPOSITION_FIELD) is not None and (
+            not certifies_not_applied_result(parsed)
+        ):
+            observed = describe_disposition(parsed, error_result=False)
+            raise MCPResultOutcomeUnknown(
+                f"{capability!r} returned a result whose execution_disposition "
+                f"is not a trusted NOT_APPLIED certification ({observed}) — "
+                f"outcome unknown",
+                observed_disposition=observed,
+            )
+        return parsed
+
+    def _extract_text(self, result: types.CallToolResult) -> str:
+        for block in result.content:
+            if isinstance(block, types.TextContent):
+                return block.text
+        return str(result.content)
+
+    def _parse_result(self, result: types.CallToolResult) -> dict[str, Any]:
+        # structured_content may be an SDK auto-wrap of a string-returning tool:
+        # {"result": "<json string>"}.  In that case parse the inner value.
+        sc = result.structured_content
+        if sc is not None:
+            if (
+                isinstance(sc, dict)
+                and list(sc.keys()) == ["result"]
+                and isinstance(sc.get("result"), str)
+            ):
+                try:
+                    parsed = json.loads(sc["result"])
+                    if isinstance(parsed, dict):
+                        return parsed
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            elif isinstance(sc, dict):
+                return sc
+
+        # Fall back to parsing JSON from TextContent
+        text = self._extract_text(result)
+        try:
+            parsed = json.loads(text)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise MCPContractError(
+                f"MCP tool result is not valid JSON: {text[:200]!r}"
+            ) from exc
+
+        if not isinstance(parsed, dict):
+            raise MCPContractError(
+                f"MCP tool result is not a JSON object; got {type(parsed).__name__}"
+            )
+        return parsed
+
+
+def _is_timeout(exc: BaseException) -> bool:
+    """True for a timeout anywhere in ``exc`` (incl. exception groups / causes)."""
+    seen: set[int] = set()
+    stack: list[BaseException] = [exc]
+    while stack:
+        cur = stack.pop()
+        if id(cur) in seen:
+            continue
+        seen.add(id(cur))
+        if isinstance(cur, TimeoutError) or "Timeout" in type(cur).__name__:
+            return True
+        stack.extend(getattr(cur, "exceptions", ()) or ())
+        for nxt in (cur.__cause__, cur.__context__):
+            if nxt is not None:
+                stack.append(nxt)
+    return False

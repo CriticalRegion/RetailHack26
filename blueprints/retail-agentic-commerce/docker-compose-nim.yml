@@ -1,0 +1,115 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# NVIDIA NIM Microservices for Retail Agentic Commerce
+#
+# This compose file deploys local NVIDIA NIMs for LLM inference and embeddings.
+# Use this instead of NVIDIA API Catalog hosted endpoints for on-prem deployment.
+#
+# Prerequisites:
+#   - NVIDIA GPU(s) with sufficient VRAM
+#   - NGC_API_KEY environment variable set
+#   - LOCAL_NIM_CACHE directory created with writable embedqa/cache and embedqa/weights subdirectories
+#
+# Usage:
+#   # Start NIMs only
+#   docker compose -f docker-compose-nim.yml up -d
+#
+#   # Start with infrastructure and application services
+#   docker compose -f docker-compose.infra.yml -f docker-compose-nim.yml -f docker-compose.yml up -d
+#
+# After starting, update your .env to use local NIMs:
+#   NIM_LLM_BASE_URL=http://nemotron-lightning:8000/v1
+#   NIM_LLM_MODEL_NAME=nvidia/nemotron-3.5-lightning
+#   NIM_EMBED_BASE_URL=http://embedqa:8000/v1
+#   NIM_EMBED_MODEL_NAME=nvidia/Nemotron-3.5-Embed-1B-BF16
+#
+# Note: The model name for local NIM is 'nvidia/nemotron-3.5-lightning' (without the size suffix)
+#       while the public endpoint uses 'nvidia/nemotron-3.5-lightning-30b-a3b'
+services:
+
+  # =============================================================================
+  # NVIDIA NIM - LLM (Nemotron 3.5 Lightning)
+  # =============================================================================
+  nemotron-lightning:
+    image: nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b:2.0.9-variant
+    container_name: nemotron-lightning
+    ports:
+      - "8010:8000"
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY}
+      # Enables OpenAI-compatible automatic tool calls for NAT agents.
+      - NIM_PASSTHROUGH_ARGS=--reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder
+      - NIM_MODEL_NAME=nvidia/nemotron-3.5-lightning
+      - NIM_SERVED_MODEL_NAME=nvidia/nemotron-3.5-lightning
+    volumes:
+      - ${LOCAL_NIM_CACHE:-~/.cache/nim}:/opt/nim/.cache
+    user: "${UID:-1000}"
+    ipc: host
+    shm_size: "32gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    restart: "no"
+    networks:
+      - acp-nim-network
+      - acp-infra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # =============================================================================
+  # NVIDIA NIM - Embedding Model
+  # =============================================================================
+  embedqa:
+    image: nvcr.io/nim/nvidia/nemotron-embed:2.4.1
+    container_name: embedqa
+    ports:
+      - "8011:8000"
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY}
+      - NIM_ENGINE_MODEL_DOWNLOAD_PROVIDER=ngc
+      - NIM_ENGINE_MODEL_NAME=nvidia/Nemotron-3.5-Embed-1B-BF16
+      - NIM_ENGINE_PRECISION=fp16
+    volumes:
+      - ${LOCAL_NIM_CACHE:-~/.cache/nim}/embedqa/cache:/opt/cache
+      - ${LOCAL_NIM_CACHE:-~/.cache/nim}/embedqa/weights:/model
+    user: "${UID:-1000}"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['1']
+              capabilities: [gpu]
+    restart: "no"
+    networks:
+      - acp-nim-network
+      - acp-infra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  acp-nim-network:
+    name: acp-nim-network
+    driver: bridge
+  # Shared network for all services
+  # Created here so NIMs can start first (they take longest to initialize)
+  # Infrastructure and application services will join this network
+  acp-infra-network:
+    name: acp-infra-network
+    driver: bridge

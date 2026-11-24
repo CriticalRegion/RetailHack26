@@ -1,0 +1,500 @@
+---
+description: Follow this document to understand the architecture, workflow, components and details of the system
+alwaysApply: false
+---
+# NVIDIA Retail Shopping Assistant - Codebase Analysis
+
+## Table of Contents
+
+1. [System Overview](#system-overview)
+2. [Architecture](#architecture)
+3. [Core Components](#core-components)
+4. [Data Flow & Workflows](#data-flow--workflows)
+5. [API Endpoints](#api-endpoints)
+6. [Configuration System](#configuration-system)
+7. [Frontend Implementation](#frontend-implementation)
+8. [Database & Storage](#database--storage)
+9. [Deployment](#deployment)
+10. [Key Files Reference](#key-files-reference)
+
+## System Overview
+
+The NVIDIA Retail Shopping Assistant is an AI-powered microservices application that provides intelligent shopping assistance through:
+
+- **Deep Agents SDK assistant runtime** with deterministic commerce tools
+- **Natural language queries** and **image-based search**
+- **Smart cart management** with persistent storage
+- **Content safety** via guardrails
+- **Real-time streaming responses**
+- **Modern React-based UI**
+
+### Key Technologies
+- **Deep Agents SDK / LangGraph**: Assistant runtime and conversation checkpointing
+- **FastAPI**: Python web framework for all backend services
+- **React + TypeScript**: Frontend
+- **Milvus**: Vector database for similarity search
+- **SQLite**: User context and cart storage
+- **Docker**: Containerized deployment
+- **NVIDIA Nemotron models**: LLM, embedding and guardrail models, on hosted endpoints or served locally by vLLM
+
+## Architecture
+
+### High-Level Architecture
+
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Frontend  │────│    Nginx     │    │  External APIs  │
+│  (React)    │    │   Proxy      │    │  (Hosted/vLLM)  │
+└─────────────┘    └──────────────┘    └─────────────────┘
+                           │
+                   ┌──────────────┐
+                   │ Orchestrator │ ← Runs each turn
+                   │(Deep Agents) │
+                   └──────────────┘
+                           │
+       ┌───────────────────┼───────────────────┐
+       │                   │                   │
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│ Catalog     │    │   Memory     │    │ Guardrails  │
+│ Retriever   │    │ Retriever    │    │   (Rails)   │
+└─────────────┘    └──────────────┘    └─────────────┘
+       │                   │
+┌─────────────┐    ┌──────────────┐
+│   Milvus    │    │   SQLite     │
+│  (Vector)   │    │ (Context/    │
+│             │    │  Cart)       │
+└─────────────┘    └──────────────┘
+```
+
+### Service Communication
+
+All services communicate via HTTP REST APIs:
+- **Port 3000**: Frontend (via Nginx)
+- **Port 8009**: Orchestrator
+- **Port 8010**: Catalog Retriever
+- **Port 8011**: Memory Retriever  
+- **Port 8012**: Guardrails
+- **Port 19530**: Milvus Database
+- **SeaweedFS** (object storage for Milvus): S3 on 9010, internal to the Compose network only
+- **etcd** (coordination): 2379, internal to the Compose network only
+
+## Core Components
+
+### 1. Orchestrator (`/orchestrator/`)
+
+**Purpose**: Runs each turn with `DeepAgentsRuntime` and the registered
+shopping tools a turn's activated skills grant. The older planner/retriever/cart/chatter graph
+has been removed; `runtime/runtime.py` is the only serving path.
+
+**Key Files**:
+- `main.py`: FastAPI application with streaming endpoints
+- `runtime/runtime.py`: Serving assistant loop and tool registry
+- `runtime/grounding.py`, `runtime/conversation_turns.py`, `runtime/prompt_assembly.py`: Grounding, memory lifecycle and prompt assembly, mixed into `DeepAgentsRuntime`
+- `runtime/tracing.py`, `runtime/streaming.py`: Trace spans and NeMo Relay; the product showing streamed to the browser
+- `tools/`: Registered tool implementations, and the skill grant gate
+- `guardrails.py`: Client for the isolated guardrail service
+- `catalog_capabilities.py`: Process-lifetime catalog contract cache and compact prompt projection
+- `catalog_request.py`: Deterministic required-constraint validation, and the pure mapping from validated plans to catalog requests
+- `commerce_tools.py`: Typed catalog and cart service adapters
+- `media_perception.py`: Image/video analysis before the assistant turn
+
+**Registered Tool Types** (twelve shopping tools, assembled in `runtime/runtime.py`;
+`docs/TOOLS.md` is the full list):
+- **Catalog**: describe the catalog, search (semantic retrieval with
+  capability-validated hard filters), product details for a known search ref
+- **Conversation**: exact resolver for products shown earlier in the conversation
+- **Cart reads and totals**: Authoritative state and code-based arithmetic
+- **Cart mutations**: add, remove and set quantity, with explicit product/cart-line
+  refs and service-side confirmation
+- **Store**: policy answers, availability and promotions (the last two are stubs)
+- **Weather forecast**: registered only when `WEATHER_ENABLED=true`
+
+### 2. Catalog Retriever (`/catalog_retriever/`)
+
+**Purpose**: Vector-based product search using embeddings
+
+**Key Functionality**:
+- Text embedding through the configured `text_embedding` model
+- Milvus vector database queries
+- Schema-driven JSONL loading and semantic-document construction
+- Data-derived capabilities and generic hard filtering
+- Source-ID product detail lookup
+
+**API Endpoints**:
+- `POST /query/text`: Text-based product search
+- `GET /capabilities`: Active fields, values, ranges, and taxonomy scopes
+- `GET /products/{product_id}`: Deterministic detail fields
+
+### 3. Memory Retriever (`/memory_retriever/`)
+
+**Purpose**: Durable conversation turns, presented products and shopping cart
+persistence in a single-replica SQLite database
+
+**Data Storage** (`memory_retriever/src/models.py`): `conversation_turns`,
+`conversation_events` and `conversation_projection` for turns and presented
+products; `cart_items`, `cart_mutations` and `cart_quantity_idempotency` for the
+cart; plus `users` and `schema_migrations`. The retired `shopper_profiles` table
+stays in the schema but nothing reads or writes it.
+
+**API Endpoints**: see [Memory Retriever (Port 8011)](#memory-retriever-port-8011).
+
+### 4. Guardrails (`/guardrails/`)
+
+**Purpose**: Content safety and moderation
+
+**Functionality**:
+- Input content filtering
+- Output content filtering
+- Nemotron content safety, topic control and video safety model checks
+- Configurable safety prompts
+
+### 5. Frontend (`/ui/`)
+
+**Purpose**: React-based user interface
+
+**Key Components**:
+- `App.tsx`: Main application container
+- `chatbox/`: Chat interface with streaming support
+- `Navbar.tsx`: Navigation header
+- `CartPanel.tsx`, `ProductDetailPanel.tsx`: Cart and product detail panels
+- `hooks/useChat.ts`: Chat state management
+
+**Features**:
+- Real-time streaming chat
+- Image upload and preview
+- Product image rendering
+- Guardrails toggle
+- Message download
+- Chat reset functionality
+
+## Data Flow & Workflows
+
+### Primary User Query Flow
+
+```
+1. User Input (Text/Image)
+   ↓
+2. Frontend (useChat.ts)
+   ↓ HTTP POST /query/stream
+3. Orchestrator (main.py)
+   ↓
+4. DeepAgentsRuntime
+   ↓
+5. Load scoped memory/cart; run optional input safety and media analysis
+   ↓
+6. Skill activation, then the model calls the shopping tools those skills grant
+   ↓
+7. Ground final text against tool evidence and current cart
+   ↓
+8. Optional output safety check
+   ↓
+9. Finalize the durable conversation turn
+   ↓
+10. Streaming Response to Frontend
+```
+
+### Tool Selection and Validation
+
+The serving model selects only registered tools. Catalog values and field roles
+come from the cached `/capabilities` contract; deterministic code validates
+every required constraint before any search and the catalog validates the wire
+request again.
+
+### Product Search Workflow
+
+```
+1. Deep Agents receives shopper language plus compact catalog capabilities
+   ↓
+2. Model emits semantic text and structured required constraints
+   ↓
+3. Orchestrator validates constraints, then calls Catalog Retriever /query/text
+   ↓
+4. Milvus similarity search plus deterministic hard filtering
+   ↓
+5. Return top-k products with source IDs and metadata
+   ↓
+6. Optional /products/{product_id} lookup deepens a known result
+```
+
+### Cart Management Workflow
+
+```
+1. Deep Agents receives an explicit cart request
+   ↓
+2. Registered tool resolves a known PRODUCT_REF or CART_LINE_ID
+   ↓
+3. Adds revalidate the product against the active catalog
+   ↓
+4. Cart update via Memory Retriever API
+   ↓
+5. Return the authoritative cart result before claiming success
+```
+
+## API Endpoints
+
+### Orchestrator (Port 8009)
+- `POST /query/stream`: Streaming query processing
+- `POST /query/timing`: Query with timing information
+- `GET /capabilities`: UI/model roles plus cached catalog contract
+- `GET /cart`: Cart for a `cart_id`
+- `GET /health`, `GET /ready`: Liveness and readiness
+
+### Catalog Retriever (Port 8010)
+- `POST /query/text`: Text-based search
+- `GET /capabilities`: Active catalog query contract
+- `GET /products/{product_id}`: Deterministic product details
+- `GET /health`, `GET /ready`: Liveness and readiness
+
+### Memory Retriever (Port 8011)
+- `POST /conversations/{conversation_id}/turn/start`: Start (or replay) a turn
+- `POST /conversations/{conversation_id}/turns/{turn_id}/finalize`: Finalize a turn
+- `POST /conversations/{conversation_id}/products/resolve`: Exact resolver for presented products
+- `GET /conversations/{conversation_id}/memory`: Turns and presented products
+- `DELETE /conversations/{conversation_id}`: Delete one conversation, leaving the cart
+- `POST /conversations/{conversation_id}/reset`: Return the conversation and its cart, then delete both
+- `GET /user/{user_id}/cart`: Cart contents
+- `POST /user/{user_id}/cart/add`, `/cart/remove`: Cart mutations
+- `PUT /user/{user_id}/cart/{cart_line_id}/quantity`: Set a line's quantity
+- `POST /user/{user_id}/clear`: Delete a user's cart and legacy user row
+- `GET /health`, `GET /ready`: Liveness and readiness
+
+### Guardrails (Port 8012)
+- `POST /v1/checks`: Input or output safety check
+- `GET /capabilities`: Configured roles and modalities
+- `GET /health`: Health check
+
+## Configuration System
+
+### Configuration Structure
+
+Each service has YAML configurations in `/shared/configs/`:
+
+**Orchestrator** (`shared/configs/orchestrator/config.yaml`, excerpt; the file
+is the source of truth):
+```yaml
+retriever_port: "http://catalog-retriever:8010"
+memory_port: "http://memory-retriever:8011"
+guardrails_url: "http://rails:8012"
+deepagents_recursion_limit: 48
+max_catalog_searches_per_turn: 10
+max_product_detail_reads_per_turn: 10
+```
+
+**Catalog Retriever** (`catalog_retriever/config.yaml`):
+```yaml
+db_port: "http://milvus:19530"
+data_source: "/app/shared/data/enriched_products.jsonl"
+schema_source: "/app/shared/data/enriched_products.schema.yaml"
+```
+
+Catalog values and category-specific field availability are derived from the
+JSONL. The sidecar declares field roles and types, not category or enum values.
+
+### Model Routing Support
+
+Model URLs and model names are set only in `.env.example` (or a profile copied
+from it). `shared/configs/models.yaml` owns the roles: each role's `source`
+(`endpoint`, `local_model`, or `disabled`), the env vars it reads for its URL,
+model and API key, and locally deployed model selection. The loader rejects a
+`base_url` or `model` written on a role. Service configs keep service behavior.
+
+## Frontend Implementation
+
+### State Management
+
+The frontend uses React hooks for state management:
+
+**useChat Hook** (`hooks/useChat.ts`):
+- Message history management
+- Streaming response handling
+- Image upload processing
+- Cart state synchronization
+- Error handling and recovery
+
+### Streaming Implementation
+
+Real-time chat streaming via Server-Sent Events (SSE):
+
+```typescript
+// Streaming response processing
+const response = await fetch(url, { method: "POST", body: JSON.stringify(payload) });
+const reader = response.body.getReader();
+const decoder = new TextDecoder('utf-8');
+
+while (true) {
+  const { value, done } = await reader.read();
+  if (done) break;
+  
+  const chunk = decoder.decode(value, { stream: true });
+  const lines = chunk.split('\n').filter(line => line.startsWith('data:'));
+  
+  for (let line of lines) {
+    const parsedChunk = parseStreamingChunk(line);
+    // Handle different chunk types: content, images, error
+  }
+}
+```
+
+### Message Types
+
+The frontend handles multiple message types:
+- `user`: User text messages
+- `user_image`: User uploaded images
+- `assistant`: AI responses
+- `image_row`: Product image grids
+- `system`: System messages
+
+## Database & Storage
+
+### Milvus Vector Database
+
+**Collections**:
+- **Text Collection**: Product text embeddings
+
+Both collections use an auto-generated integer `pk`, a `text` payload, and a
+runtime-dimension `vector`. Dynamic metadata carries the source product fields
+and `catalog_fingerprint`, including the sidecar-mapped source product ID used
+by search, details, and cart adapters. Because these names belong to the index,
+sidecars cannot map or declare `pk`, `text`, `vector`, or
+`catalog_fingerprint` as source fields.
+
+### SQLite Storage (Memory Retriever)
+
+One SQLite file on the `memory-data` volume (`MEMORY_DATABASE_URL`), so the
+memory service runs as a single replica. `memory_retriever/src/models.py` defines
+the tables and `migrations.py` applies schema changes in order. A cart line
+(`cart_items`) carries `cart_line_id`, `user_id`, `product_id`, `item`, `size`,
+`amount` and `price`.
+
+### Product Catalog
+
+Products are stored as JSON Lines with a field-role sidecar:
+
+```text
+/shared/data/enriched_products.jsonl
+/shared/data/enriched_products.schema.yaml
+```
+
+Each JSONL row carries the product values. The sidecar maps product identity,
+taxonomy, semantic, filter, and detail roles. `GET /capabilities` advertises the
+observed categories, values, numeric ranges, coverage, and taxonomy scopes to
+the orchestrator; do not hard-code those values in prompts or application code.
+The orchestrator caches the first successful full contract for its process
+lifetime, uses it for deterministic validation, and sends only a compact
+projection to the LLM. After a catalog change, wait for catalog health and then
+restart the orchestrator.
+
+## Deployment
+
+### Docker Compose Architecture
+
+The system uses multi-container Docker deployment:
+
+**Core Services**:
+- `orchestrator`: Runs each shopper turn
+- `catalog-retriever`: Product search
+- `catalog-indexer`: One-shot catalog indexing before the retriever starts
+- `memory-retriever`: Conversation turns and cart
+- `rails`: Content safety
+- `frontend`: React UI
+- `nginx`: Reverse proxy
+
+**Infrastructure**:
+- `milvus`: Vector database
+- `etcd`: Coordination service
+- `seaweedfs`: Object storage for Milvus segments and indexes
+- `phoenix`, `otel-collector`, `relay-collector`: Tracing
+
+### Environment Variables
+
+**Required**:
+```bash
+NVIDIA_API_KEY=your_nvapi_key_here
+LLM_API_KEY=$NVIDIA_API_KEY
+EMBED_API_KEY=$NVIDIA_API_KEY
+RAIL_API_KEY=$NVIDIA_API_KEY
+```
+
+### Deployment Options
+
+Locally deployed models are vLLM serving Hugging Face checkpoints from
+`docker-compose-model-local.yaml`.
+
+**Option A: Local Deployment** (6x 80 GB GPUs by default: 4 for the LLM, 1 shared by embedding, content safety and topic control, 1 for video safety):
+```bash
+cp .env.local-models.example .env.local-models  # add HF_TOKEN
+source .env.local-models
+docker compose -f docker-compose-model-local.yaml up -d --wait \
+  local-llm local-embedding local-content-safety local-topic-control local-video-safety
+docker compose up -d --build
+```
+
+**Option B: Hosted Deployment** (hosted NVIDIA endpoints):
+```bash
+python scripts/model_config.py deploy --build
+```
+
+## Key Files Reference
+
+### Critical Files for Understanding
+
+**Architecture & Orchestration**:
+- `orchestrator/src/runtime/runtime.py`: Deep Agents serving loop
+- `orchestrator/src/main.py`: Main API application
+- `docker-compose.yaml`: Service orchestration
+
+**Tool Implementations**:
+- `orchestrator/src/tools/catalog.py`: Product search tools
+- `orchestrator/src/tools/cart.py`: Cart read and mutation tools
+- `orchestrator/src/tools/skills.py`: Skill activation
+- `orchestrator/src/tools/skill_gate.py`: Grant enforcement at dispatch
+
+**Data Models**:
+- `orchestrator/src/agenttypes.py`: Core data structures
+- `orchestrator/src/runtime/prompts.py`: Prompt assembly
+
+**Service Implementations**:
+- `catalog_retriever/src/main.py`: Vector search API
+- `memory_retriever/src/main.py`: User data persistence
+- `guardrails/src/main.py`: Content safety
+
+**Frontend Core**:
+- `ui/src/App.tsx`: Main React application
+- `ui/src/hooks/useChat.ts`: Chat state management
+- `ui/src/components/chatbox/chatbox.tsx`: Chat interface
+
+**Configuration**:
+- `shared/configs/orchestrator/config.yaml`: Main config
+- `shared/configs/catalog_retriever/config.yaml`: Search config
+- `shared/data/enriched_products.jsonl`: Product catalog values
+- `shared/data/enriched_products.schema.yaml`: Product field roles
+
+### File Organization
+
+```
+retail-shopping-assistant/
+├── orchestrator/           # Runs each shopper turn
+├── catalog_retriever/      # Product search service
+├── memory_retriever/       # User data service
+├── guardrails/            # Content safety service
+├── ui/                    # React frontend
+├── shared/                # Shared configurations and data
+│   ├── configs/           # YAML configurations
+│   ├── data/              # Product catalog
+│   └── images/            # Product images
+├── docs/                  # Documentation
+└── docker-compose*.yaml   # Deployment configs
+```
+
+## Summary
+
+This NVIDIA Retail Shopping Assistant demonstrates sophisticated AI application architecture combining:
+
+- **A single Deep Agents runtime** with skill-granted tools
+- **Vector similarity search** for intelligent product discovery
+- **Real-time streaming** for responsive user experience
+- **Microservices design** for scalability and maintainability
+- **Content safety** through integrated guardrails
+- **Modern UI/UX** with React and TypeScript
+
+The system is well-architected for both development and production deployment, with clear separation of concerns and comprehensive configuration management.
