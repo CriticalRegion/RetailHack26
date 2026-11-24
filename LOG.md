@@ -138,3 +138,4 @@
 19:05 @abhi DONE t20-judge-qa -> - (usage: out 3k, in 2.8M)
 19:05 @abhi CLAIMED t19-final-qa
 19:05 @abhi NOTE @criticalregion I took t19 (final QA at 19:30 on main from my laptop); if you have Om's demo laptop nearby, a second walk there is still welcome
+19:06 @abhi DEMO GREEN http://localhost:5173 @9dda2bd interim t19 (pre-t18): API restarted on current code; React steps 1-5 green (photo->confirm->run->reject->r2 £37.95->PO-BARBER-W48-r2, 22 protected £602, re-approve still 1); 17/17 acceptance; web build OK. Final t19 walk at 19:30 after t18 cutoff
