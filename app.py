@@ -8,9 +8,7 @@ fixture forecast below. Intake is iris.intake, sourcing iris.agent, orders iris.
 """
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import altair as alt
 from dotenv import load_dotenv
@@ -22,106 +20,19 @@ load_dotenv()  # NEBIUS_*, IRIS_*_MODEL, TAVILY_API_KEY from .env (never committ
 from iris import intake, llm  # noqa: E402
 from iris.agent import SourcingAgent, diff, nebius_llm
 from iris.orders import OrderBook, OrderError, ProposalLine
+from iris.calc import forecast, protected_bookings, shortages  # noqa: E402
+from iris.data import DEMO_NOW, HERO_SKU, load_bookings, load_stocktake  # noqa: E402
+from iris.data import PRODUCTS as DATA_PRODUCTS  # noqa: E402
 from iris.sourcing import TZ, FixtureAdapter, default_adapters
 
-# ---------------------------------------------------------------- fixture (FAKE)
-DEMO_NOW = datetime(2026, 11, 24, 9, 0)  # Tue 24 Nov 2026, 09:00 Europe/London
+# ---------------------------------------------------------------- shared data (synthetic, data/*.json)
 BASKET_ID = "BARBER-W48"
-
-PRODUCTS = {
-    "clay-matte-100ml": {"name": "Northline Matte Clay 100 ml", "unit": "ml",
-                         "aliases": ["matte clay", "clay", "northline"]},
-    "neck-strips": {"name": "Barberline Neck Strips", "unit": "units", "aliases": ["neck strip", "strips"]},
-}
-SERVICES = {  # service -> (price GBP, recipe {sku: qty in base unit})
-    "Textured crop": (28, {"clay-matte-100ml": 6, "neck-strips": 1}),
-    "Skin fade": (24, {"clay-matte-100ml": 2, "neck-strips": 1}),
-    "Scissor cut": (30, {"clay-matte-100ml": 3, "neck-strips": 1}),
-}
-SEED_ON_HAND = {"clay-matte-100ml": 120.0, "neck-strips": 400.0}
-
-_DAY_PLAN = {  # day offset from DEMO_NOW -> services in hourly slots from 09:00
-    0: ["Textured crop", "Skin fade", "Textured crop", "Scissor cut", "Textured crop", "Skin fade", "Textured crop", "Scissor cut", "Skin fade"],
-    1: ["Textured crop", "Skin fade", "Textured crop", "Scissor cut", "Textured crop", "Skin fade", "Textured crop", "Scissor cut", "Skin fade"],
-    2: ["Skin fade", "Textured crop", "Textured crop", "Scissor cut", "Skin fade", "Textured crop", "Textured crop", "Scissor cut", "Skin fade"],
-    3: ["Textured crop", "Textured crop", "Textured crop", "Skin fade", "Textured crop", "Textured crop", "Scissor cut", "Textured crop", "Skin fade"],
-    4: ["Textured crop", "Textured crop", "Textured crop", "Textured crop", "Skin fade", "Textured crop", "Textured crop", "Textured crop", "Scissor cut"],
-    6: ["Textured crop", "Skin fade", "Textured crop", "Scissor cut", "Textured crop", "Skin fade"],
-}  # day 5 (Sunday) closed
-
-
-def demo_bookings() -> list[dict]:
-    out, n = [], 1
-    for day, slots in _DAY_PLAN.items():
-        for i, svc in enumerate(slots):
-            out.append({"id": f"BK-{n:03d}", "service": svc,
-                        "time": DEMO_NOW.replace(hour=9) + timedelta(days=day, hours=i), "status": "booked"})
-            n += 1
-    out.append({"id": "BK-900", "service": "Textured crop", "time": DEMO_NOW + timedelta(days=2, hours=2),
-                "status": "cancelled"})
-    return out
-
-
-# ---------------------------------------------------------------- adapters
-@dataclass
-class ForecastLine:
-    sku: str
-    usage: float
-    on_hand: float
-    incoming: float
-    uncovered: float
-    first_at_risk: dict | None
-    at_risk: list[dict]
-    contributing: dict  # service -> booking count
-    series: list[tuple[datetime, float]]
-
-
-def forecast(on_hand: dict, pending: list, bookings: list[dict]) -> dict[str, ForecastLine]:
-    """Time-ordered stock projection over 7 days. Inbound counts once, at its ETA."""
-    end = DEMO_NOW + timedelta(days=7)
-    live = sorted((b for b in bookings if b["status"] == "booked" and DEMO_NOW <= b["time"] < end),
-                  key=lambda b: b["time"])
-    out = {}
-    for sku in PRODUCTS:
-        events = [(b["time"], 1, -SERVICES[b["service"]][1].get(sku, 0), b) for b in live
-                  if SERVICES[b["service"]][1].get(sku)]
-        events += [(l.eta, 0, l.qty, None) for l in pending if l.sku == sku and l.eta < end]
-        events.sort(key=lambda e: (e[0], e[1]))  # deliveries before a same-time booking
-        level, low = on_hand.get(sku, 0.0), 0.0
-        series, at_risk, contributing = [(DEMO_NOW, level)], [], {}
-        for t, _, delta, b in events:
-            level += delta
-            series.append((t, level))
-            if b is not None:
-                contributing[b["service"]] = contributing.get(b["service"], 0) + 1
-                if level < 0:
-                    at_risk.append(b)
-            low = min(low, level)
-        out[sku] = ForecastLine(
-            sku=sku,
-            usage=sum(-d for _, _, d, b in events if b is not None),
-            on_hand=on_hand.get(sku, 0.0),
-            incoming=sum(l.qty for l in pending if l.sku == sku),
-            uncovered=round(-low, 1),
-            first_at_risk=at_risk[0] if at_risk else None,
-            at_risk=at_risk,
-            contributing=contributing,
-            series=series,
-        )
-    return out
+PRODUCTS = {k: {"name": p.name, "unit": p.unit} for k, p in DATA_PRODUCTS.items()}
+HERO = HERO_SKU
 
 
 def naive(dt: datetime | None) -> datetime | None:
     return dt.astimezone(TZ).replace(tzinfo=None) if dt is not None and dt.tzinfo else dt
-
-
-def shortages(fc: dict[str, ForecastLine]) -> list[dict]:
-    """Forecast lines with uncovered demand -> t4 Shortage records."""
-    return [{"sku": s, "required_qty": l.uncovered, "need_by": l.first_at_risk["time"],
-             "first_at_risk_booking_id": l.first_at_risk["id"],
-             "affected_booking_ids": [b["id"] for b in l.at_risk],
-             "weekly_demand": l.usage, "on_hand": l.on_hand, "inbound": l.incoming}
-            for s, l in fc.items() if l.uncovered > 0 and l.first_at_risk]
 
 
 def to_lines(ap) -> list[ProposalLine]:
@@ -145,8 +56,8 @@ def init_state():
     ss = st.session_state
     if "book" not in ss:
         ss.book = OrderBook()
-        ss.on_hand = dict(SEED_ON_HAND)
-        ss.bookings = demo_bookings()
+        ss.on_hand = load_stocktake()
+        ss.bookings = load_bookings()
         ss.review = []
         ss.agent = None
         ss.agent_prop = None
@@ -219,7 +130,7 @@ with c1:
         if st.button("Read photo", disabled=img is None):
             ss.review = intake.extract("photo", img)
     with t_text:
-        txt = st.text_area("Stock notes", "1 x Northline Matte Clay 100 ml, 380 neck strips", height=80)
+        txt = st.text_area("Stock notes", "1 x Brand X Matte Clay 100 ml, 380 neck strips", height=80)
         if st.button("Read text"):
             ss.review = intake.extract("text", txt)
     if ss.review:
@@ -264,9 +175,9 @@ for sku, line in fc.items():
         mix = ", ".join(f"{n} × {s.lower()}" for s, n in line.contributing.items())
         st.error(f"**Runs out {b['time']:%a %d %b %H:%M}**: {b['id']} {b['service'].lower()} can't be served. "
                  f"{len(line.at_risk)} bookings at risk. Demand comes from {mix}.")
-    elif sku == "clay-matte-100ml" and baseline[sku].first_at_risk:
+    elif sku == HERO and baseline[sku].first_at_risk:
         st.success(f"Covered: incoming stock protects all {len(baseline[sku].at_risk)} bookings that were at risk.")
-    if sku == "clay-matte-100ml":
+    if sku == HERO:
         df = pd.DataFrame(line.series, columns=["time", "projected"])
         chart = alt.Chart(df).mark_line(interpolate="step-after").encode(
             x=alt.X("time:T", title=None), y=alt.Y("projected:Q", title=f"projected {p['unit']}"))
@@ -360,7 +271,7 @@ if prop is not None:
                     flash("error", str(e))
                 st.rerun()
         with cr:
-            reason = st.text_input("Reject with feedback", placeholder="e.g. not BarberHub, they were late last time")
+            reason = st.text_input("Reject with feedback", placeholder="e.g. not BarberSupply, they were late last time")
             if st.button("Reject and search again", width="stretch"):
                 do_reject(prop.revision, reason)
                 flash("info", f"r{prop.revision} rejected. No order placed. Searching again without the rejected offers.")
@@ -398,8 +309,6 @@ for oid, o in book.orders.items():
             flash("success", f"{oid} received: on-hand updated, nothing left pending.")
             st.rerun()
 if book.orders:
-    b0, b1 = baseline["clay-matte-100ml"], fc["clay-matte-100ml"]
-    protected = {b["id"] for b in b0.at_risk} - {b["id"] for b in b1.at_risk}
-    rev = sum(SERVICES[b["service"]][0] for b in b0.at_risk if b["id"] in protected)
-    st.success(f"{len(protected)} bookings protected · estimated booking revenue covered £{rev} "
+    n_prot, rev = protected_bookings(baseline, fc)
+    st.success(f"{n_prot} bookings protected · estimated booking revenue covered £{rev:g} "
                f"(separate from supplier price).")
