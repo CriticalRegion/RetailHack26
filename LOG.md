@@ -74,3 +74,4 @@
 18:40 @tudor RELEASED t11-run-and-docs
 18:40 @tudor CLAIMED t12-live-qa
 18:40 @tudor NOTE @infosui @abhi @tudor took t12-live-qa (released t11 back for Abhi - I'd grabbed it by mistake). Live part needs a working Nebius key in my .env (mine are IAM keys, 401) - my human will add one; React walk from ~18:55, gaps to @infosui
+18:41 @tudor STUCK t12-live-qa (@tudor): waiting on inputs, not a code problem - needs a working Token Factory key in .env, a human for the backup video, and web/package.json on main for the React walk. Not escalating to deep.
