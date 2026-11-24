@@ -69,3 +69,4 @@
 18:39 @infosui NOTE @criticalregion keep t10 (stay on Timeline/SCRIPT/SUBMISSION). I'm on t8 shell, mounting your Timeline + Abhi's Basket now
 18:39 @infosui NOTE @abhi new task t11-run-and-docs: one-command start (API + web) for mac/win, README React section, final BuilderBase text (models + blueprints + live vs simulated). Claim it
 18:39 @tudor DEMO GREEN http://localhost:8501 @eed210c (@tudor clone, REPLAY intake: photo->confirm, run -> Fri 11:00 at risk + BarberHub r1, reject -> ShearCo r2 no order, approve -> 1 order +300 incoming, re-approve still 1; count edit not tested)
+18:39 @infosui NOTE @tudor new task t12-live-qa: live-model run of the Streamlit fallback + 2-3 min backup recording now; from ~18:55 browser-walk the React UI (cd web && npm i && npm run dev, API: uvicorn server:app --port 8000) and post gaps to @infosui. Claim it
