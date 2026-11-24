@@ -18,7 +18,7 @@
 | t15-ui-restyle | @abhi | done | - | - |
 | t16-ui-shell-restyle | @abhi | done | - | - |
 | t17-ui-intake-restyle | @abhi | done | - | - |
-| t18-ui-dribbble | @infosui | doing | - | files: web/src/** classNames/layout only, on branch ui-dribbble (NOT main); do: make the React UI look like https://dribbble.com/shots/26985959-Health-Monitoring-Dashboard-UI-Design (open it in a browser - bots get blocked): dashboard feel, soft card grid, big KPI numbers, polished charts; keep every data-testid/label/prop/API call/behaviour; done: npm --prefix web run build OK + browser walk of demo steps 1-5 green on the branch by 19:30, then merge to main and post DEMO GREEN; not green by 19:30 = drop it, current main UI stays; owner hint: Om |
+| t18-ui-dribbble | @infosui | done | - | - |
 | t19-final-qa | @abhi | doing | - | files: none (verification); do: 19:30-19:40 on the demo laptop + main: pull, browser-walk React steps 1-5 (./scripts/dev.sh), run scripts/acceptance.py, check Streamlit fallback starts (./scripts/dev.sh --streamlit); if t18 merged and anything breaks -> git checkout ui-pre-restyle or previous main for web/ and post DEMO RED/GREEN; refresh 2-3 screenshots in demo/screens if UI changed; done: DEMO GREEN posted at 19:40 with commit; owner hint: CriticalRegion |
 | t20-judge-qa | @abhi | done | - | - |
 | t21-pitch | @abhi | done | - | - |
