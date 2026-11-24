@@ -8,7 +8,7 @@
 | t5-app-orders | @abhi | done | t1-schemas | - |
 | t6-e2e-demo | @abhi | done | t2-data-forecast,t3-intake,t4-sourcing,t5-app-orders | - |
 | t7-api | @infosui | done | - | - |
-| t8-web-shell | - | todo | - | files: web/ (scaffold, src/App.tsx, src/theme, src/components/{Stepper,KpiHero,Intake}*, src/api.ts, src/mock/); do: Vite React TS Tailwind, layout, stepper, KPI hero, stock intake screen with LIVE/REPLAY badges, api.ts with mock fallback; done: npm run dev shows the flow on mocks; owner hint: Om |
+| t8-web-shell | @criticalregion | doing | - | files: web/ (scaffold, src/App.tsx, src/theme, src/components/{Stepper,KpiHero,Intake}*, src/api.ts, src/mock/); do: Vite React TS Tailwind, layout, stepper, KPI hero, stock intake screen with LIVE/REPLAY badges, api.ts with mock fallback; done: npm run dev shows the flow on mocks; owner hint: Om |
 | t9-web-basket | @abhi | done | t8-web-shell | - |
 | t10-web-timeline | @criticalregion | doing | t8-web-shell | files: web/src/components/Timeline*, demo/; do: Recharts run-out chart (stock vs bookings, red first-at-risk marker, dashed after-order line), screenshots, update demo/SCRIPT.md + SUBMISSION.md for the React UI; done: chart on mocks, screenshots refreshed; owner hint: Tudor or whoever is free |
 | t11-run-and-docs | @abhi | done | - | - |
