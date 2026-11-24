@@ -46,3 +46,26 @@ def test_lenient_parse_of_drifting_model_json():
         {"raw_label": "Neck strips", "count": "400", "count_unit": "strips", "extra": 1}]})
     rows = to_rows(obs, intake.PRODUCTS, "t")
     assert [r["quantity"] for r in rows] == [120, 400]
+
+
+def test_guessed_counts_are_never_auto_confirmed(monkeypatch):
+    monkeypatch.setattr(intake.llm, "text_ready", lambda: True)
+    monkeypatch.setattr(intake.llm, "text_model", lambda: "m")
+    monkeypatch.setattr(intake.llm, "chat_json", lambda s, u: {"items": [
+        {"raw_label": "2 tubs clay", "sku": "clay-matte-100ml", "count": 2},                     # no unit
+        {"raw_label": "clay", "sku": "clay-matte-100ml", "count": "1 full + 1 open"},           # two numbers
+        {"raw_label": "neck strips", "sku": "neck-strips", "count": 400, "count_unit": "base"}]})  # clean
+    rows = extract_text("whatever")
+    assert [r["confirm"] for r in rows] == [False, False, True]
+
+
+def test_rule_fallback_does_not_tick_complex_phrases(monkeypatch):
+    monkeypatch.delenv("NEBIUS_API_KEY", raising=False)
+    rows = extract_text("1 full Northline matte clay 100ml + 1 open about 20% left, 4 boxes of 100 neck strips, 380 neck strips")
+    assert [r["confirm"] for r in rows] == [False, False, True]
+
+
+def test_model_none_ambiguity_is_clear():
+    obs = intake._parse_items({"items": [{"raw_label": "clay", "sku": "clay-matte-100ml", "count": 120,
+                                          "count_unit": "base", "ambiguity": "none"}]})
+    assert to_rows(obs, intake.PRODUCTS, "t")[0]["confirm"]

@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 from iris import llm
 from iris.sourcing import PRODUCTS, ProductSpec
@@ -104,24 +104,28 @@ def _clean(it: dict) -> dict:
     """Models drift from the schema (string counts, odd count_unit, extra keys): coerce before validating."""
     it = {k: it.get(k) for k in ("raw_label", "sku", "count", "count_unit", "evidence", "ambiguity")}
     it["raw_label"] = str(it.get("raw_label") or "")[:120] or "(no label)"
-    it["count"] = _num(it.get("count"))
-    unit = str(it.get("count_unit") or "").lower()
+    raw_count, unit = it.get("count"), str(it.get("count_unit") or "").lower()
+    it["count"] = _num(raw_count)
+    guessed = it["count"] is not None and (
+        isinstance(raw_count, str) and len(re.findall(r"\d+", raw_count)) > 1  # "1 full + 1 open"
+        or unit not in ("item", "items", "tub", "tubs", "box", "boxes", "pot", "pots", "base", "ml", "unit", "units"))
     it["count_unit"] = "item" if unit in ("item", "items", "tub", "tubs", "box", "boxes", "pot", "pots") else "base"
-    for k in ("sku", "evidence", "ambiguity"):
-        it[k] = None if k == "sku" and not it.get(k) else str(it.get(k) or "")
+    it["sku"] = str(it["sku"]) if it.get("sku") else None
+    it["evidence"] = str(it.get("evidence") or "")
+    # A guess is never auto-confirmed: to_rows leaves ambiguous rows unticked for the merchant.
+    amb = str(it.get("ambiguity") or "").strip()
+    if amb.lower().strip(".") in ("none", "n/a", "na", "null", "no", "-", "clear"):
+        amb = ""  # models write "none" for "no ambiguity"
+    it["ambiguity"] = amb or ("model output unclear - check the count" if guessed else "")
     return it
 
 
 def _parse_items(data: dict) -> list[Observation]:
     out = []
-    items = data.get("items") or data.get("products") or data.get("stock") or []
+    items = data.get("items") or []
     for it in items if isinstance(items, list) else []:
-        if not isinstance(it, dict):
-            continue
-        try:
+        if isinstance(it, dict):
             out.append(Observation(**_clean(it)))
-        except ValidationError:
-            out.append(Observation(raw_label=str(it.get("raw_label", it))[:80], ambiguity="unparseable row"))
     return out
 
 
@@ -134,8 +138,11 @@ def rule_parse(text: str) -> list[Observation]:
         if not part:
             continue
         m = re.match(r"(\d+(?:\.\d+)?)\s*[x×]?\s*(.*)", part, re.I)
+        # Counts other than sizes ("100 ml"): more than one means a phrase the rules can't read safely
+        counts = re.findall(r"\b\d+(?:\.\d+)?\b(?!\s*(?:ml|g|l)\b)", part, re.I)
+        amb = "no count found" if not m else ("several numbers - check the count" if len(counts) > 1 else "")
         obs.append(Observation(raw_label=part, count=float(m.group(1)) if m else None, count_unit="item",
-                               evidence="rule parser", ambiguity="" if m else "no count found"))
+                               evidence="rule parser", ambiguity=amb))
     return obs
 
 
