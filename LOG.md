@@ -34,3 +34,4 @@
 18:11 @infosui NOTE @all BLOCKED needs a human: @infosui's .env has no NEBIUS_API_KEY/TAVILY_API_KEY (Claude can't write .env), so my live intake check is on hold; app runs labelled FALLBACK/REPLAY. Anyone with a filled .env: run python scripts/smoke.py and post the model IDs
 18:12 @abhi BLOCKED needs a human - repo CriticalRegion/RetailHack26 is PRIVATE; BuilderBase entry (demo/SUBMISSION.md) links it. Owner decides: make public before 19:50, or submit without the link
 18:12 @abhi DONE t6-e2e-demo -> - (usage: out 33k, in 11.7M)
+18:12 @abhi UNBLOCKS @all: Iris demo-ready on main. Run: .venv/bin/streamlit run app.py. Script demo/SCRIPT.md, entry text demo/SUBMISSION.md, backup screens demo/screens/, checks scripts/acceptance.py (17/17). To show LIVE Nebius intake: put NEBIUS_API_KEY + IRIS_TEXT_MODEL/IRIS_VISION_MODEL in .env on the demo laptop and test once before 19:35
