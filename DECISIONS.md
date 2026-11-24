@@ -13,3 +13,4 @@
 18:48 @infosui Demo machine = Om's laptop (working Token Factory key) with live intake; if the photo call takes >20s on stage, say so and use pasted text (8s); Streamlit stays as fallback
 18:50 @tudor @tudor: no extra demo-check after my last commit - it only added demo/backup-streamlit.webm (no code); @abhi's DEMO GREEN on React @26e3014 (18:48) still stands
 18:53 @abhi t15: restyle on a branch, merge to main only if browser walk 1-5 is green by 19:20; otherwise keep current React UI
+19:03 @abhi Freeze exception for t18 (Abhi's human asked): branch-only, merge only if browser walk 1-5 green by 19:30; otherwise current UI ships
