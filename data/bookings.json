@@ -1,0 +1,366 @@
+[
+ {
+  "id": "BK-001",
+  "service": "Textured crop",
+  "time": "2026-11-24T09:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-002",
+  "service": "Skin fade",
+  "time": "2026-11-24T10:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-003",
+  "service": "Textured crop",
+  "time": "2026-11-24T11:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-004",
+  "service": "Scissor cut",
+  "time": "2026-11-24T12:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-005",
+  "service": "Textured crop",
+  "time": "2026-11-24T13:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-006",
+  "service": "Skin fade",
+  "time": "2026-11-24T14:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-007",
+  "service": "Textured crop",
+  "time": "2026-11-24T15:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-008",
+  "service": "Scissor cut",
+  "time": "2026-11-24T16:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-009",
+  "service": "Skin fade",
+  "time": "2026-11-24T17:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-010",
+  "service": "Textured crop",
+  "time": "2026-11-25T09:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-011",
+  "service": "Skin fade",
+  "time": "2026-11-25T10:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-012",
+  "service": "Textured crop",
+  "time": "2026-11-25T11:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-013",
+  "service": "Scissor cut",
+  "time": "2026-11-25T12:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-014",
+  "service": "Textured crop",
+  "time": "2026-11-25T13:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-015",
+  "service": "Skin fade",
+  "time": "2026-11-25T14:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-016",
+  "service": "Textured crop",
+  "time": "2026-11-25T15:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-017",
+  "service": "Scissor cut",
+  "time": "2026-11-25T16:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-018",
+  "service": "Skin fade",
+  "time": "2026-11-25T17:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-019",
+  "service": "Skin fade",
+  "time": "2026-11-26T09:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-020",
+  "service": "Textured crop",
+  "time": "2026-11-26T10:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-021",
+  "service": "Textured crop",
+  "time": "2026-11-26T11:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-022",
+  "service": "Scissor cut",
+  "time": "2026-11-26T12:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-023",
+  "service": "Skin fade",
+  "time": "2026-11-26T13:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-024",
+  "service": "Textured crop",
+  "time": "2026-11-26T14:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-025",
+  "service": "Textured crop",
+  "time": "2026-11-26T15:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-026",
+  "service": "Scissor cut",
+  "time": "2026-11-26T16:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-027",
+  "service": "Skin fade",
+  "time": "2026-11-26T17:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-028",
+  "service": "Textured crop",
+  "time": "2026-11-27T09:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-029",
+  "service": "Textured crop",
+  "time": "2026-11-27T10:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-030",
+  "service": "Textured crop",
+  "time": "2026-11-27T11:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-031",
+  "service": "Skin fade",
+  "time": "2026-11-27T12:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-032",
+  "service": "Textured crop",
+  "time": "2026-11-27T13:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-033",
+  "service": "Textured crop",
+  "time": "2026-11-27T14:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-034",
+  "service": "Scissor cut",
+  "time": "2026-11-27T15:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-035",
+  "service": "Textured crop",
+  "time": "2026-11-27T16:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-036",
+  "service": "Skin fade",
+  "time": "2026-11-27T17:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-037",
+  "service": "Textured crop",
+  "time": "2026-11-28T09:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-038",
+  "service": "Textured crop",
+  "time": "2026-11-28T10:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-039",
+  "service": "Textured crop",
+  "time": "2026-11-28T11:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-040",
+  "service": "Textured crop",
+  "time": "2026-11-28T12:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-041",
+  "service": "Skin fade",
+  "time": "2026-11-28T13:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-042",
+  "service": "Textured crop",
+  "time": "2026-11-28T14:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-043",
+  "service": "Textured crop",
+  "time": "2026-11-28T15:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-044",
+  "service": "Textured crop",
+  "time": "2026-11-28T16:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-045",
+  "service": "Scissor cut",
+  "time": "2026-11-28T17:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-046",
+  "service": "Textured crop",
+  "time": "2026-11-30T09:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-047",
+  "service": "Skin fade",
+  "time": "2026-11-30T10:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-048",
+  "service": "Textured crop",
+  "time": "2026-11-30T11:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-049",
+  "service": "Scissor cut",
+  "time": "2026-11-30T12:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-050",
+  "service": "Textured crop",
+  "time": "2026-11-30T13:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-051",
+  "service": "Skin fade",
+  "time": "2026-11-30T14:00",
+  "status": "booked",
+  "notes": ""
+ },
+ {
+  "id": "BK-900",
+  "service": "Textured crop",
+  "time": "2026-11-26T11:00",
+  "status": "cancelled",
+  "notes": "cancelled by client"
+ }
+]

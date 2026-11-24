@@ -1,0 +1,23 @@
+{
+ "Textured crop": {
+  "price": 28,
+  "recipe": {
+   "CLAY-MATTE-100": 6,
+   "NECK-STRIP": 1
+  }
+ },
+ "Skin fade": {
+  "price": 24,
+  "recipe": {
+   "CLAY-MATTE-100": 2,
+   "NECK-STRIP": 1
+  }
+ },
+ "Scissor cut": {
+  "price": 30,
+  "recipe": {
+   "CLAY-MATTE-100": 3,
+   "NECK-STRIP": 1
+  }
+ }
+}

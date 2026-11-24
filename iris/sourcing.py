@@ -14,51 +14,33 @@ No upstream code is imported. Supplier page text is evidence only: it is stored
 on `Evidence.snippet` and never placed in model instructions.
 
 Adapters:
-- `FixtureAdapter`: labelled demo offers (`data/offers.json` if present, else the
-  built-in `DEMO_OFFERS`). Repeatable, no network.
+- `FixtureAdapter`: labelled demo offers from `data/offers.json` (FAKE:
+  synthetic sellers). Repeatable, no network.
 - `TavilyAdapter`: live public-listing discovery when `TAVILY_API_KEY` is set.
   Listings whose price, pack or delivery can't be read stay leads, never basket lines.
 """
 from __future__ import annotations
 
-import json
 import math
 import os
 import re
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Iterable, Literal, Optional, Protocol
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
+from iris.data import PRODUCTS, ProductSpec, load_offers
+
 TZ = ZoneInfo("Europe/London")
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
 def aware(dt: datetime) -> datetime:
-    """Treat naive datetimes as business-local (Europe/London)."""
+    """For comparisons only: naive datetimes are business-local (Europe/London)."""
     return dt.replace(tzinfo=TZ) if dt.tzinfo is None else dt
 
 
 # --------------------------------------------------------------------------- records
-
-
-class ProductSpec(BaseModel):
-    """What the merchant actually needs. Offers must match brand, variant and item size."""
-
-    sku: str
-    brand: str
-    product: str  # e.g. "Matte Clay"
-    variant: str = ""  # e.g. "Matte"; "" means any variant
-    item_size: float  # base units per item, e.g. 100 (ml) per pot, 1 per strip
-    unit: Literal["ml", "g", "unit"] = "unit"
-    aliases: list[str] = Field(default_factory=list)
-
-    @property
-    def display(self) -> str:
-        size = f"{self.item_size:g} {self.unit}" if self.unit != "unit" else ""
-        return " ".join(p for p in (self.brand, self.product, size) if p)
 
 
 class Evidence(BaseModel):
@@ -141,30 +123,6 @@ class SearchResult(BaseModel):
         return next((r for r in self.ranked if r.on_time is False), None)
 
 
-# --------------------------------------------------------------------------- products
-
-PRODUCTS: dict[str, ProductSpec] = {
-    "clay-matte-100ml": ProductSpec(
-        sku="clay-matte-100ml",
-        brand="Northline",
-        product="Matte Clay",
-        variant="Matte",
-        item_size=100,
-        unit="ml",
-        aliases=["matte clay", "northline clay", "matte clay 100ml"],
-    ),
-    "neck-strips": ProductSpec(
-        sku="neck-strips",
-        brand="Barberline",
-        product="Neck Strips",
-        variant="",
-        item_size=1,
-        unit="unit",
-        aliases=["neck strip", "neck paper"],
-    ),
-}
-
-
 # --------------------------------------------------------------------------- adapters
 
 
@@ -175,63 +133,22 @@ class SupplierAdapter(Protocol):
         ...
 
 
-# Labelled demo offers (FAKE: synthetic sellers). ETAs are days after the demo clock.
-# Hero SKU: two verified on-time offers, one cheaper late offer, plus a wrong-size
-# listing and one with no delivery date, to exercise the filters.
-DEMO_OFFERS: list[dict] = [
-    {"offer_id": "fx-clay-shearco", "supplier": "ShearCo Supply", "sku": "clay-matte-100ml",
-     "title": "Northline Matte Clay 100ml (3-pack)", "brand": "Northline", "variant": "Matte",
-     "item_size": 100, "unit": "ml", "items_per_pack": 3, "pack_price": 33.00, "shipping": 4.95,
-     "available_packs": 20, "eta_days": 2},
-    {"offer_id": "fx-clay-barberhub", "supplier": "BarberHub", "sku": "clay-matte-100ml",
-     "title": "Northline Matte Clay 100 ml", "brand": "Northline", "variant": "Matte",
-     "item_size": 100, "unit": "ml", "items_per_pack": 1, "pack_price": 11.50, "shipping": 3.50,
-     "available_packs": 40, "eta_days": 1},
-    {"offer_id": "fx-clay-bulkbarber", "supplier": "BulkBarber Wholesale", "sku": "clay-matte-100ml",
-     "title": "Northline Matte Clay 100ml x6", "brand": "Northline", "variant": "Matte",
-     "item_size": 100, "unit": "ml", "items_per_pack": 6, "pack_price": 54.00, "shipping": 0.0,
-     "available_packs": 10, "eta_days": 6},
-    {"offer_id": "fx-clay-wrongsize", "supplier": "GroomDirect", "sku": "clay-matte-100ml",
-     "title": "Northline Matte Clay 75ml travel size", "brand": "Northline", "variant": "Matte",
-     "item_size": 75, "unit": "ml", "items_per_pack": 1, "pack_price": 7.99, "shipping": 2.99,
-     "available_packs": 50, "eta_days": 1},
-    {"offer_id": "fx-clay-noeta", "supplier": "MarketSeller42", "sku": "clay-matte-100ml",
-     "title": "Northline Matte Clay 100ml", "brand": "Northline", "variant": "Matte",
-     "item_size": 100, "unit": "ml", "items_per_pack": 1, "pack_price": 9.49, "shipping": None,
-     "available_packs": None, "eta_days": None},
-    {"offer_id": "fx-strips-shearco", "supplier": "ShearCo Supply", "sku": "neck-strips",
-     "title": "Barberline Neck Strips 5 x 100", "brand": "Barberline", "variant": "",
-     "item_size": 1, "unit": "unit", "items_per_pack": 500, "pack_price": 12.00, "shipping": 4.95,
-     "available_packs": 30, "eta_days": 2},
-    {"offer_id": "fx-strips-barberhub", "supplier": "BarberHub", "sku": "neck-strips",
-     "title": "Barberline Neck Strips roll of 100", "brand": "Barberline", "variant": "",
-     "item_size": 1, "unit": "unit", "items_per_pack": 100, "pack_price": 2.90, "shipping": 3.50,
-     "available_packs": 100, "eta_days": 1},
-]
-
-
 class FixtureAdapter:
-    """Labelled, repeatable offers. Reads data/offers.json when it exists."""
+    """Labelled, repeatable offers (FAKE: synthetic sellers) from data/offers.json."""
 
     name = "fixture"
 
-    def __init__(self, rows: Optional[list[dict]] = None, path: Optional[Path] = None):
-        if rows is None:
-            p = path or DATA_DIR / "offers.json"
-            rows = json.loads(p.read_text()) if p.exists() else DEMO_OFFERS
-            if isinstance(rows, dict):  # allow {"offers": [...]}
-                rows = rows.get("offers", [])
-        self.rows = rows
+    def __init__(self, rows: Optional[list[dict]] = None):
+        self.rows = rows if rows is not None else load_offers()
 
     def search(self, request: SupplierSearchRequest, spec: ProductSpec, now: datetime) -> list[SupplierOffer]:
-        now = aware(now)
         out = []
         for r in self.rows:
             if r.get("sku") != request.sku:
                 continue
             eta = r.get("eta")
             if eta:
-                eta = aware(datetime.fromisoformat(eta))
+                eta = datetime.fromisoformat(eta)
             elif r.get("eta_days") is not None:
                 eta = now + timedelta(days=r["eta_days"])
             fields = {k: v for k, v in r.items() if k not in ("sku", "eta", "eta_days")}
@@ -297,7 +214,6 @@ class TavilyAdapter:
             return []
         from tavily import TavilyClient  # imported lazily: optional dependency
 
-        now = aware(now)
         client = TavilyClient(api_key=self.api_key)
         resp = client.search(
             query=f"{request.query} buy price delivery {request.constraints.region}",
@@ -417,7 +333,7 @@ def search_suppliers(
     spec: Optional[ProductSpec] = None,
 ) -> SearchResult:
     """Read-only supplier search. Never orders, never writes state."""
-    now = aware(now or datetime.now(TZ))
+    now = now or datetime.now(TZ).replace(tzinfo=None)
     spec = spec or PRODUCTS[request.sku]
     adapters = adapters if adapters is not None else default_adapters()
     seen, evaluated, sources = set(), [], []

@@ -22,10 +22,9 @@ from typing import Callable, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, Field
 
+from iris.data import PRODUCTS, ProductSpec
 from iris.sourcing import (
-    PRODUCTS,
     TZ,
-    ProductSpec,
     RankedOffer,
     SearchConstraints,
     SearchResult,
@@ -180,7 +179,7 @@ def grounded_reason(line: ProposalLine, llm: Optional[LLM]) -> str:
 
 
 def plan_query(spec: ProductSpec, region: str, llm: Optional[LLM]) -> str:
-    base = f'"{spec.brand} {spec.product}"' + (f" {spec.item_size:g}{spec.unit}" if spec.unit != "unit" else "") + f" {region}"
+    base = f'"{spec.brand} {spec.product}"' + (f" {spec.item_size:g}{spec.unit}" if spec.unit != "units" else "") + f" {region}"
     if llm is None:
         return base
     try:
@@ -190,7 +189,7 @@ def plan_query(spec: ProductSpec, region: str, llm: Optional[LLM]) -> str:
     except Exception:
         return base
     # Must stay on the exact product.
-    if q and spec.brand.lower() in q.lower() and (spec.unit == "unit" or f"{spec.item_size:g}" in q) and len(q) < 200:
+    if q and spec.brand.lower() in q.lower() and (spec.unit == "units" or f"{spec.item_size:g}" in q) and len(q) < 200:
         return q
     return base
 
@@ -250,7 +249,7 @@ class SourcingAgent:
 
     def propose(self, shortages, now: Optional[datetime] = None,
                 constraints: Optional[SearchConstraints] = None) -> Proposal:
-        now = aware(now or datetime.now(TZ))
+        now = now or datetime.now(TZ).replace(tzinfo=None)
         lines = [self.source_line(s, now, constraints) for s in shortages if Shortage.coerce(s).required_qty > 0]
         p = Proposal(basket_id=f"bkt-{uuid.uuid4().hex[:8]}", revision=1, created_at=now, lines=lines,
                      changed_skus=[l.sku for l in lines])
@@ -260,7 +259,7 @@ class SourcingAgent:
     def reject(self, proposal: Proposal, feedback: str = "", skus: Optional[list[str]] = None,
                offer_ids: Optional[list[str]] = None, now: Optional[datetime] = None) -> Proposal:
         """New revision: rejected offers and feedback constraints applied to the affected SKUs."""
-        now = aware(now or datetime.now(TZ))
+        now = now or datetime.now(TZ).replace(tzinfo=None)
         if proposal.status == "approved":
             raise ValueError("approved proposals can't be rejected")
         affected = set(skus or [l.sku for l in proposal.lines])
@@ -300,4 +299,20 @@ def diff(old: Proposal, new: Proposal) -> list[str]:
         if a != b:
             out.append(f"{l.product}: {a} → {b}")
     out.append(f"Basket total: £{old.total:.2f} → £{new.total:.2f}")
+    return out
+
+
+def to_order_lines(proposal: Proposal) -> list:
+    """Agent proposal -> iris.orders.ProposalLine list, for OrderBook.propose()."""
+    from iris.orders import ProposalLine as OrderLine
+
+    out = []
+    for l in proposal.lines:
+        if not l.selected:
+            continue
+        o, r = l.selected.offer, l.selected
+        out.append(OrderLine(
+            sku=l.sku, offer_id=o.offer_id, supplier=o.supplier, packs=r.packs,
+            units_per_pack=o.base_units_per_pack(), pack_price=o.pack_price, shipping=o.shipping or 0.0,
+            eta=o.eta, source=o.evidence.url or o.evidence.label, reason=l.reason, on_time=bool(r.on_time)))
     return out
