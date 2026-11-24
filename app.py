@@ -46,7 +46,7 @@ def to_lines(ap) -> list[ProposalLine]:
         out.append(ProposalLine(
             sku=l.sku, offer_id=o.offer_id, supplier=o.supplier, packs=r.packs,
             units_per_pack=o.base_units_per_pack(), pack_price=o.pack_price, shipping=o.shipping or 0.0,
-            eta=naive(o.eta), source=o.evidence.url or f"{o.evidence.source}: {o.evidence.label}",
+            eta=naive(o.eta), source=o.evidence.url or o.evidence.label,
             reason=l.reason))
     return out
 
@@ -237,7 +237,7 @@ if prop is not None:
         at_risk = fc_before.get(al.sku).at_risk if al.sku in fc_before else []
         if al.status == "unmet":
             st.warning(f"**{al.product}: no on-time offer left.** {al.reason}")
-        with st.expander(f"Offers considered for {al.product} · query “{al.query}”"):
+        with st.expander(f"Offers considered for {al.product} · search: {al.query.replace(chr(34), '')}"):
             rows = []
             for tag, r in (("selected", al.selected), ("alternative", al.alternative), ("late", al.late_option)):
                 if r is None:
@@ -246,13 +246,16 @@ if prop is not None:
                 status = tag
                 if r.on_time is False and o.eta:
                     status = f"LATE: misses {sum(1 for b in at_risk if b['time'] < naive(o.eta))} at-risk bookings"
-                rows.append({"supplier": o.supplier, "listing": o.title, "status": status, "packs": r.packs,
-                             "delivered £": r.delivered_cost, "ETA": f"{naive(o.eta):%a %d %H:%M}" if o.eta else "unknown",
+                per100 = (round(r.delivered_cost / r.covered_qty * 100, 2)
+                          if r.delivered_cost and r.covered_qty and al.unit == "ml" else None)
+                rows.append({"supplier": o.supplier, "listing": o.title, "status": status, "packs": str(r.packs),
+                             "delivered £": f"{r.delivered_cost:.2f}" if r.delivered_cost is not None else "",
+                             "£ per 100 ml": f"{per100:.2f}" if per100 else "", "ETA": f"{naive(o.eta):%a %d %H:%M}" if o.eta else "unknown",
                              "evidence": o.evidence.url or o.evidence.label})
             for r in al.leads:
                 o = r.offer
                 rows.append({"supplier": o.supplier, "listing": o.title, "status": "lead: " + "; ".join(r.issues),
-                             "packs": None, "delivered £": None,
+                             "packs": "", "delivered £": "", "£ per 100 ml": "",
                              "ETA": f"{naive(o.eta):%a %d %H:%M}" if o.eta else "unknown",
                              "evidence": o.evidence.url or o.evidence.label})
             if ap.excluded_offer_ids:
@@ -302,7 +305,7 @@ for oid, o in book.orders.items():
         pending = [l for l in book.inbound if l.order_id == oid and not l.received]
         st.markdown(f"**{oid}** · r{o.revision} · £{o.total:.2f} · "
                     + ("pending delivery" if pending else "received"))
-        st.write(", ".join(f"{l.packs} × {l.supplier} {PRODUCTS[l.sku]['name']} (ETA {l.eta:%a %H:%M})"
+        st.write(", ".join(f"{l.packs} pack(s) = {l.units:g} {PRODUCTS[l.sku]['unit']} of {PRODUCTS[l.sku]['name']} from {l.supplier} (ETA {l.eta:%a %H:%M})"
                            for l in o.lines))
         if pending and st.button("Mark received", key=f"recv_{oid}"):
             ss.on_hand = book.mark_received(oid, ss.on_hand)
