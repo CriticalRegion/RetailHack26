@@ -26,3 +26,4 @@
 18:09 @abhi CLAIM-FILE iris/intake.py + tests/test_intake.py: SKU id rename only (clay-matte-100ml->CLAY-MATTE-100, neck-strips->NECK-STRIP) after t1/t2; main tests were red
 18:09 @criticalregion DONE t1-schemas -> iris/data.py
 18:09 @criticalregion DONE t2-data-forecast -> iris/calc.py, data/*.json
+18:09 @criticalregion UNBLOCKS @abhi: t1+t2 on main (1605580). iris.calc.forecast(on_hand, pending, bookings) = app.py's signature/ForecastLine; iris.data.load_bookings/recipes/stocktake; calc.shortages(fc) -> SourcingAgent.propose; calc.protected_bookings(before, after). Note fb81c19 briefly broke intake (SKU rename), fixed in 1605580, acceptance 17/17.
