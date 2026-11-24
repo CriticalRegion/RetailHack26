@@ -119,9 +119,9 @@ def extract_text(text: str, products: dict[str, ProductSpec] = PRODUCTS) -> list
 
 # ------------------------------------------------------------------ photo path (VLM)
 REPLAY = [  # labelled replay of the staged shelf photo, used when the VLM is not available
-    Observation(raw_label="Brand X Matte Clay 100ml x1 + 1 open (~20%)", sku="CLAY-MATTE-100", count=120,
+    Observation(raw_label="Northline Matte Clay 100ml x1 + 1 open (~20%)", sku="clay-matte-100ml", count=120,
                 count_unit="base", evidence="replay of staged photo"),
-    Observation(raw_label="Neck strips box (4 x 100)", sku="NECK-STRIP", count=400, count_unit="base",
+    Observation(raw_label="Neck strips box (4 x 100)", sku="neck-strips", count=400, count_unit="base",
                 evidence="replay of staged photo"),
 ]
 

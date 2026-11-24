@@ -19,9 +19,9 @@ Checks: `python scripts/check.py` (unit tests) and `python scripts/acceptance.py
 ## Demo path
 
 1. **Stock count**: upload `demo/stocktake.png` (or paste a note). Iris reads it, the owner confirms the rows, and the forecast moves.
-2. **Next 7 days**: Brand X Matte Clay runs out **Fri 11:00**, at booking BK-030 (a textured crop). The chart shows projected stock against booked usage.
-3. **Supplier basket**: Iris proposes 2 × BarberSupply UK (£20.95, arrives Thu 12:00). The table shows the other offers it considered: CutPrice Wholesale, £6.55 cheaper but arriving Monday, after the Friday bookings, and listings kept as leads (wrong size, no delivery date).
-4. **Reject with feedback** ("not BarberSupply..."): revision 2 switches to SalonDirect (3-pack, £24.00). No order is placed.
+2. **Next 7 days**: Northline Matte Clay runs out **Fri 11:00**, at booking BK-030 (a textured crop). The chart shows projected stock against booked usage.
+3. **Supplier basket**: Iris proposes 2 × BarberHub (£26.50, arrives Wed). The table shows the other offers it considered: a cheaper-per-ml bulk seller that misses the Friday bookings, and listings kept as leads (wrong size, no delivery date).
+4. **Reject with feedback** ("not BarberHub..."): revision 2 switches to ShearCo (£37.95). No order is placed.
 5. **Approve**: exactly one simulated order. The stock shows as incoming and the bookings at risk are covered. Approving again still leaves one order.
 
 ## How it works

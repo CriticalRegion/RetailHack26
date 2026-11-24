@@ -130,7 +130,7 @@ with c1:
         if st.button("Read photo", disabled=img is None):
             ss.review = intake.extract("photo", img)
     with t_text:
-        txt = st.text_area("Stock notes", "1 x Brand X Matte Clay 100 ml, 380 neck strips", height=80)
+        txt = st.text_area("Stock notes", "1 x Northline Matte Clay 100 ml, 380 neck strips", height=80)
         if st.button("Read text"):
             ss.review = intake.extract("text", txt)
     if ss.review:
@@ -271,7 +271,7 @@ if prop is not None:
                     flash("error", str(e))
                 st.rerun()
         with cr:
-            reason = st.text_input("Reject with feedback", placeholder="e.g. not BarberSupply, they were late last time")
+            reason = st.text_input("Reject with feedback", placeholder="e.g. not BarberHub, they were late last time")
             if st.button("Reject and search again", width="stretch"):
                 do_reject(prop.revision, reason)
                 flash("info", f"r{prop.revision} rejected. No order placed. Searching again without the rejected offers.")

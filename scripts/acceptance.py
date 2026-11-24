@@ -49,7 +49,7 @@ check("late cheaper offer shown with missed bookings", late)
 leads = [d for d in at.dataframe if "lead:" in d.value.to_string()]
 check("wrong-size / no-ETA listings kept as leads", leads)
 
-at.text_input[0].input("not BarberSupply, they were late last time").run()
+at.text_input[0].input("not BarberHub, they were late last time").run()
 btn(at, "Reject").click().run()
 r2 = texts(at.subheader)
 check("reject -> r2 with different supplier", any("r2 · PROPOSED" in s for s in r2), str(r2))
@@ -76,7 +76,7 @@ check("empty basket cannot be approved", btn(at, "Approve r").disabled)
 # 3. Text intake changes the forecast; unreadable count stays unknown --------------------
 at = fresh()
 before = [e for e in texts(at.error) if "Runs out" in e]
-at.text_area[0].input("3 x Brand X Matte Clay 100 ml, lots of neck strips").run()
+at.text_area[0].input("3 x Northline Matte Clay 100 ml, lots of neck strips").run()
 btn(at, "Read text").click().run()
 btn(at, "Confirm counts").click().run()
 after = [e for e in texts(at.error) if "Runs out" in e]
