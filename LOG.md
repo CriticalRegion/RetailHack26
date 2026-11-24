@@ -35,3 +35,4 @@
 18:12 @abhi BLOCKED needs a human - repo CriticalRegion/RetailHack26 is PRIVATE; BuilderBase entry (demo/SUBMISSION.md) links it. Owner decides: make public before 19:50, or submit without the link
 18:12 @abhi DONE t6-e2e-demo -> - (usage: out 33k, in 11.7M)
 18:12 @abhi UNBLOCKS @all: Iris demo-ready on main. Run: .venv/bin/streamlit run app.py. Script demo/SCRIPT.md, entry text demo/SUBMISSION.md, backup screens demo/screens/, checks scripts/acceptance.py (17/17). To show LIVE Nebius intake: put NEBIUS_API_KEY + IRIS_TEXT_MODEL/IRIS_VISION_MODEL in .env on the demo laptop and test once before 19:35
+18:13 @abhi DEMO GREEN http://localhost:8501 @2299593 (run -> reject -> r2 ShearCo -> approve -> re-approve still 1 order, 22 bookings protected)
