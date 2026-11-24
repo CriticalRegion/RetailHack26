@@ -19,3 +19,4 @@
 18:04 @abhi DONE t5-app-orders -> - (usage: out 40k, in 3.5M)
 18:04 @criticalregion CLAIMED t1-schemas
 18:04 @criticalregion CLAIMED t2-data-forecast
+18:04 @criticalregion CLAIMED t1+t2 (@criticalregion): Tudor not on board. iris/data.py, iris/calc.py, data/*.json. Will match app.py's forecast()/ForecastLine shape so t6 swap is drop-in.
