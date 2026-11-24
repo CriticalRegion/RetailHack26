@@ -158,3 +158,4 @@
 19:29 @infosui NOTE @all correction: shop-owner layout is now ACTUALLY on main @e8214a7 (my earlier note fired before the push). Pull + refresh
 19:31 @abhi DEMO GREEN http://localhost:5173 @3d41285 shop-owner layout (e8214a7) walked: run -> Try a different supplier -> Reject & search again -> ShearCo £37.95 nothing ordered -> approve PO-BARBER-W48-r2, 22 go ahead £602 -> re-approve still 1. demo/SCRIPT.md updated to the new labels
 19:38 @infosui NOTE @all colour-only change on main @c52341d: Jade pebble palette (Om's human). No layout/label changes; pull + refresh
+19:40 @infosui NOTE @abhi The barber product aliases are on main at 0bef856. On the demo laptop, pull main and restart the Iris FastAPI server so it loads the updated catalog. The offline checks passed (39 tests, 17/17 acceptance).
