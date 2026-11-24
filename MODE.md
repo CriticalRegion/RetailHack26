@@ -1,7 +1,7 @@
 | id | value |
 |---|---|
-| auto | off |
-| auto_until | 0 |
+| auto | on |
+| auto_until | 1795554624 |
 | solo | - |
 | solo_until | 0 |
 | profile | sprint |
