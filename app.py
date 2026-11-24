@@ -18,23 +18,25 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from iris.agent import SourcingAgent, diff, nebius_llm
 from iris.orders import OrderBook, OrderError, ProposalLine
+from iris.sourcing import TZ, FixtureAdapter, default_adapters
 
 # ---------------------------------------------------------------- fixture (FAKE)
 DEMO_NOW = datetime(2026, 11, 24, 9, 0)  # Tue 24 Nov 2026, 09:00 Europe/London
 BASKET_ID = "BARBER-W48"
 
 PRODUCTS = {
-    "CLAY-MATTE-100": {"name": "Brand X Matte Clay 100 ml", "unit": "ml",
-                       "aliases": ["matte clay", "clay", "brand x"]},
-    "NECK-STRIP": {"name": "Neck strips", "unit": "units", "aliases": ["neck strip", "strips"]},
+    "clay-matte-100ml": {"name": "Northline Matte Clay 100 ml", "unit": "ml",
+                         "aliases": ["matte clay", "clay", "northline"]},
+    "neck-strips": {"name": "Barberline Neck Strips", "unit": "units", "aliases": ["neck strip", "strips"]},
 }
 SERVICES = {  # service -> (price GBP, recipe {sku: qty in base unit})
-    "Textured crop": (28, {"CLAY-MATTE-100": 6, "NECK-STRIP": 1}),
-    "Skin fade": (24, {"CLAY-MATTE-100": 2, "NECK-STRIP": 1}),
-    "Scissor cut": (30, {"CLAY-MATTE-100": 3, "NECK-STRIP": 1}),
+    "Textured crop": (28, {"clay-matte-100ml": 6, "neck-strips": 1}),
+    "Skin fade": (24, {"clay-matte-100ml": 2, "neck-strips": 1}),
+    "Scissor cut": (30, {"clay-matte-100ml": 3, "neck-strips": 1}),
 }
-SEED_ON_HAND = {"CLAY-MATTE-100": 120.0, "NECK-STRIP": 400.0}
+SEED_ON_HAND = {"clay-matte-100ml": 120.0, "neck-strips": 400.0}
 
 _DAY_PLAN = {  # day offset from DEMO_NOW -> services in hourly slots from 09:00
     0: ["Textured crop", "Skin fade", "Textured crop", "Scissor cut", "Textured crop", "Skin fade", "Textured crop", "Scissor cut", "Skin fade"],
@@ -56,22 +58,6 @@ def demo_bookings() -> list[dict]:
     out.append({"id": "BK-900", "service": "Textured crop", "time": DEMO_NOW + timedelta(days=2, hours=2),
                 "status": "cancelled"})
     return out
-
-
-DEMO_OFFERS = [  # labelled fixture listings for the hero SKU
-    {"offer_id": "OF-BSU-100", "supplier": "BarberSupply UK", "title": "Brand X Matte Clay 100 ml",
-     "sku": "CLAY-MATTE-100", "size_ml": 100, "units_per_pack": 100, "pack_price": 8.50, "shipping": 3.95,
-     "eta": datetime(2026, 11, 26, 12, 0), "source": "fixture:barbersupply-uk"},
-    {"offer_id": "OF-SD-3PK", "supplier": "SalonDirect", "title": "Brand X Matte Clay 100 ml (3-pack)",
-     "sku": "CLAY-MATTE-100", "size_ml": 100, "units_per_pack": 300, "pack_price": 24.00, "shipping": 0.0,
-     "eta": datetime(2026, 11, 26, 16, 0), "source": "fixture:salondirect"},
-    {"offer_id": "OF-CPW-100", "supplier": "CutPrice Wholesale", "title": "Brand X Matte Clay 100 ml",
-     "sku": "CLAY-MATTE-100", "size_ml": 100, "units_per_pack": 100, "pack_price": 6.20, "shipping": 2.00,
-     "eta": datetime(2026, 11, 30, 10, 0), "source": "fixture:cutprice-wholesale"},
-    {"offer_id": "OF-BSU-50", "supplier": "BarberSupply UK", "title": "Brand X Matte Clay 50 ml",
-     "sku": "CLAY-MATTE-100", "size_ml": 50, "units_per_pack": 50, "pack_price": 4.90, "shipping": 3.95,
-     "eta": datetime(2026, 11, 26, 12, 0), "source": "fixture:barbersupply-uk"},
-]
 
 
 # ---------------------------------------------------------------- adapters
@@ -123,56 +109,33 @@ def forecast(on_hand: dict, pending: list, bookings: list[dict]) -> dict[str, Fo
     return out
 
 
-def source_offers(line: ForecastLine, excluded: set[str]) -> dict:
-    """Filter + rank fixture offers for one shortage. Returns ranked/late/leads."""
-    need_by = line.first_at_risk["time"]
-    ranked, late, leads = [], [], []
-    for o in DEMO_OFFERS:
-        if o["sku"] != line.sku:
-            continue
-        if o["size_ml"] != 100:
-            leads.append({**o, "why": f"wrong size ({o['size_ml']} ml)"})
-            continue
-        if o["offer_id"] in excluded:
-            continue
-        packs = math.ceil(line.uncovered / o["units_per_pack"])
-        cand = {**o, "packs": packs, "delivered": round(packs * o["pack_price"] + o["shipping"], 2)}
-        (ranked if o["eta"] <= need_by else late).append(cand)
-    ranked.sort(key=lambda o: o["delivered"])
-    late.sort(key=lambda o: o["delivered"])
-    for o in late:
-        o["missed"] = [b for b in line.at_risk if b["time"] < o["eta"]]
-    return {"ranked": ranked, "late": late, "leads": leads}
+def naive(dt: datetime | None) -> datetime | None:
+    return dt.astimezone(TZ).replace(tzinfo=None) if dt is not None and dt.tzinfo else dt
 
 
-def reason_for(best: dict, line: ForecastLine, late: list[dict]) -> str:
-    b = line.first_at_risk
-    lead = (b["time"] - best["eta"])
-    hrs = int(lead.total_seconds() // 3600)
-    txt = (f"Covers the {line.uncovered:g} ml gap; arrives {best['eta']:%a %H:%M}, {hrs}h before the "
-           f"{b['time']:%a %H:%M} {b['service'].lower()}.")
-    if late:
-        c = late[0]
-        txt += (f" {c['supplier']} is £{best['delivered'] - c['delivered']:.2f} cheaper but arrives "
-                f"{c['eta']:%a}, after {len(c['missed'])} at-risk bookings.")
-    return txt
+def shortages(fc: dict[str, ForecastLine]) -> list[dict]:
+    """Forecast lines with uncovered demand -> t4 Shortage records."""
+    return [{"sku": s, "required_qty": l.uncovered, "need_by": l.first_at_risk["time"],
+             "first_at_risk_booking_id": l.first_at_risk["id"],
+             "affected_booking_ids": [b["id"] for b in l.at_risk],
+             "weekly_demand": l.usage, "on_hand": l.on_hand, "inbound": l.incoming}
+            for s, l in fc.items() if l.uncovered > 0 and l.first_at_risk]
 
 
-def build_lines(fc: dict[str, ForecastLine], excluded: set[str]) -> tuple[list[ProposalLine], dict]:
-    lines, detail = [], {}
-    for sku, line in fc.items():
-        if line.uncovered <= 0:
+def to_lines(ap) -> list[ProposalLine]:
+    """t4 agent proposal -> order-book lines (only selected, on-time offers can be ordered)."""
+    out = []
+    for l in ap.lines:
+        r = l.selected
+        if l.status == "unmet" or r is None:
             continue
-        res = source_offers(line, excluded)
-        detail[sku] = res
-        if res["ranked"]:
-            best = res["ranked"][0]
-            lines.append(ProposalLine(
-                sku=sku, offer_id=best["offer_id"], supplier=best["supplier"], packs=best["packs"],
-                units_per_pack=best["units_per_pack"], pack_price=best["pack_price"],
-                shipping=best["shipping"], eta=best["eta"], source=best["source"],
-                reason=reason_for(best, line, res["late"])))
-    return lines, detail
+        o = r.offer
+        out.append(ProposalLine(
+            sku=l.sku, offer_id=o.offer_id, supplier=o.supplier, packs=r.packs,
+            units_per_pack=o.base_units_per_pack(), pack_price=o.pack_price, shipping=o.shipping or 0.0,
+            eta=naive(o.eta), source=o.evidence.url or f"{o.evidence.source}: {o.evidence.label}",
+            reason=l.reason))
+    return out
 
 
 def extract_text(text: str) -> list[dict]:
@@ -185,7 +148,7 @@ def extract_text(text: str) -> list[dict]:
         m = re.match(r"(\d+(?:\.\d+)?)\s*[x×]?\s*(.*)", part, re.I)
         qty, label = (float(m.group(1)), m.group(2)) if m else (None, part)
         sku = next((s for s, p in PRODUCTS.items() if any(a in label.lower() for a in p["aliases"])), None)
-        if sku == "CLAY-MATTE-100" and qty is not None:
+        if sku == "clay-matte-100ml" and qty is not None:
             size = re.search(r"(\d+)\s*ml", label, re.I)
             qty = qty * (float(size.group(1)) if size else 100)
         rows.append({"confirm": sku is not None and qty is not None, "raw label": part, "sku": sku or "?",
@@ -197,9 +160,9 @@ def extract_text(text: str) -> list[dict]:
 def extract_photo(_img) -> list[dict]:
     """FAKE photo intake: labelled replay of the staged shelf photo."""
     return [
-        {"confirm": True, "raw label": "Brand X Matte Clay 100ml x1 + 1 open (~20%)", "sku": "CLAY-MATTE-100",
+        {"confirm": True, "raw label": "Northline Matte Clay 100ml x1 + 1 open (~20%)", "sku": "clay-matte-100ml",
          "quantity": 120.0, "unit": "ml", "note": "open tub estimated"},
-        {"confirm": True, "raw label": "Neck strips box (4 x 100)", "sku": "NECK-STRIP",
+        {"confirm": True, "raw label": "Neck strips box (4 x 100)", "sku": "neck-strips",
          "quantity": 400.0, "unit": "units", "note": ""},
     ]
 
@@ -212,15 +175,33 @@ def init_state():
         ss.on_hand = dict(SEED_ON_HAND)
         ss.bookings = demo_bookings()
         ss.review = []
-        ss.detail = {}
+        ss.agent = None
+        ss.agent_prop = None
         ss.flash = None
 
 
-def do_source(feedback: str = "", excluded: tuple = (), note: str = ""):
+def make_agent(live: bool) -> SourcingAgent:
+    if live:
+        return SourcingAgent(adapters=default_adapters(), llm=nebius_llm())
+    return SourcingAgent(adapters=[FixtureAdapter()], llm=None)
+
+
+def do_source():
     ss = st.session_state
     fc = forecast(ss.on_hand, ss.book.pending(), ss.bookings)
-    lines, ss.detail = build_lines(fc, set(excluded))
-    ss.book.propose(BASKET_ID, lines, feedback=feedback, excluded_offer_ids=excluded, change_note=note)
+    ss.agent = make_agent(ss.get("live", False))
+    ss.agent_prop = ss.agent.propose(shortages(fc), now=DEMO_NOW.replace(tzinfo=TZ))
+    ss.book.propose(BASKET_ID, to_lines(ss.agent_prop))
+
+
+def do_reject(revision: int, reason: str):
+    ss = st.session_state
+    ss.book.reject(BASKET_ID, revision, reason)
+    old = ss.agent_prop
+    ss.agent_prop = ss.agent.reject(old, feedback=reason, now=DEMO_NOW.replace(tzinfo=TZ))
+    ss.book.propose(BASKET_ID, to_lines(ss.agent_prop), feedback=reason or "rejected",
+                    excluded_offer_ids=ss.agent_prop.excluded_offer_ids,
+                    change_note=" · ".join(diff(old, ss.agent_prop)))
 
 
 def flash(kind: str, msg: str):
@@ -237,7 +218,11 @@ with st.sidebar:
     st.markdown("### Iris")
     st.caption("Never run out of what's booked.")
     st.write(f"**Shop:** Old St Barbers (demo)  \n**Clock:** {DEMO_NOW:%a %d %b %Y %H:%M} London")
-    st.warning("FIXTURE MODE: synthetic bookings, labelled supplier offers, replayed photo extraction.")
+    st.toggle("Live search (Tavily + Nebius)", key="live",
+              help="Off: labelled fixture offers, repeatable. On: live listings; unverifiable ones stay leads.")
+    st.warning("Synthetic bookings and stock (FAKE). Supplier offers: "
+               + ("live search + fixture." if ss.get("live") else "labelled fixture.")
+               + " Orders are simulated.")
     if st.button("Reset demo", width="stretch"):
         for k in list(ss.keys()):
             del ss[k]
@@ -259,7 +244,7 @@ with c1:
         if st.button("Read photo", disabled=img is None):
             ss.review = extract_photo(img)
     with t_text:
-        txt = st.text_area("Stock notes", "1 x Brand X Matte Clay 100 ml, 380 neck strips", height=80)
+        txt = st.text_area("Stock notes", "1 x Northline Matte Clay 100 ml, 380 neck strips", height=80)
         if st.button("Read text"):
             ss.review = extract_text(txt)
     if ss.review:
@@ -304,9 +289,9 @@ for sku, line in fc.items():
         mix = ", ".join(f"{n} × {s.lower()}" for s, n in line.contributing.items())
         st.error(f"**Runs out {b['time']:%a %d %b %H:%M}**: {b['id']} {b['service'].lower()} can't be served. "
                  f"{len(line.at_risk)} bookings at risk. Demand comes from {mix}.")
-    elif sku == "CLAY-MATTE-100" and baseline[sku].first_at_risk:
+    elif sku == "clay-matte-100ml" and baseline[sku].first_at_risk:
         st.success(f"Covered: incoming stock protects all {len(baseline[sku].at_risk)} bookings that were at risk.")
-    if sku == "CLAY-MATTE-100":
+    if sku == "clay-matte-100ml":
         df = pd.DataFrame(line.series, columns=["time", "projected"])
         chart = alt.Chart(df).mark_line(interpolate="step-after").encode(
             x=alt.X("time:T", title=None), y=alt.Y("projected:Q", title=f"projected {p['unit']}"))
@@ -318,6 +303,8 @@ for sku, line in fc.items():
             layers.append(alt.Chart(pt).mark_point(color="#c0392b", size=120, filled=True).encode(
                 x="time:T", y="projected:Q", tooltip=["label"]))
         st.altair_chart(alt.layer(*layers).properties(height=220), width="stretch")
+
+fc_before = forecast(ss.on_hand, [], ss.bookings)
 
 # 3. Basket --------------------------------------------------------------------
 st.header("3 · Supplier basket")
@@ -359,19 +346,31 @@ if prop is not None:
                     book.remove_line(BASKET_ID, l.sku)
                     st.rerun()
 
-    for sku, res in ss.detail.items():
-        with st.expander(f"Offers considered for {PRODUCTS[sku]['name']}"):
-            rows = [{"supplier": o["supplier"], "status": "on time", "packs": o["packs"], "delivered £": o["delivered"],
-                     "ETA": f"{o['eta']:%a %d %H:%M}", "source": o["source"]} for o in res["ranked"]]
-            rows += [{"supplier": o["supplier"], "status": f"LATE: {len(o['missed'])} bookings missed",
-                      "packs": o["packs"], "delivered £": o["delivered"], "ETA": f"{o['eta']:%a %d %H:%M}",
-                      "source": o["source"]} for o in res["late"]]
-            rows += [{"supplier": o["supplier"], "status": f"lead only: {o['why']}", "packs": None,
-                      "delivered £": None, "ETA": f"{o['eta']:%a %d %H:%M}", "source": o["source"]}
-                     for o in res["leads"]]
-            excl = [o for o in DEMO_OFFERS if o["offer_id"] in prop.excluded_offer_ids]
-            rows += [{"supplier": o["supplier"], "status": "excluded by you", "packs": None, "delivered £": None,
-                      "ETA": f"{o['eta']:%a %d %H:%M}", "source": o["source"]} for o in excl]
+    ap = ss.agent_prop
+    for al in (ap.lines if ap else []):
+        at_risk = fc_before.get(al.sku).at_risk if al.sku in fc_before else []
+        if al.status == "unmet":
+            st.warning(f"**{al.product}: no on-time offer left.** {al.reason}")
+        with st.expander(f"Offers considered for {al.product} · query “{al.query}”"):
+            rows = []
+            for tag, r in (("selected", al.selected), ("alternative", al.alternative), ("late", al.late_option)):
+                if r is None:
+                    continue
+                o = r.offer
+                status = tag
+                if r.on_time is False and o.eta:
+                    status = f"LATE: misses {sum(1 for b in at_risk if b['time'] < naive(o.eta))} at-risk bookings"
+                rows.append({"supplier": o.supplier, "listing": o.title, "status": status, "packs": r.packs,
+                             "delivered £": r.delivered_cost, "ETA": f"{naive(o.eta):%a %d %H:%M}" if o.eta else "unknown",
+                             "evidence": o.evidence.url or o.evidence.label})
+            for r in al.leads:
+                o = r.offer
+                rows.append({"supplier": o.supplier, "listing": o.title, "status": "lead: " + "; ".join(r.issues),
+                             "packs": None, "delivered £": None,
+                             "ETA": f"{naive(o.eta):%a %d %H:%M}" if o.eta else "unknown",
+                             "evidence": o.evidence.url or o.evidence.label})
+            if ap.excluded_offer_ids:
+                st.caption("Excluded by you: " + ", ".join(ap.excluded_offer_ids))
             st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
     if prop.status == "proposed":
@@ -386,11 +385,9 @@ if prop is not None:
                     flash("error", str(e))
                 st.rerun()
         with cr:
-            reason = st.text_input("Reject with feedback", placeholder="e.g. BarberSupply was late last time")
+            reason = st.text_input("Reject with feedback", placeholder="e.g. not BarberHub, they were late last time")
             if st.button("Reject and search again", width="stretch"):
-                rej = book.reject(BASKET_ID, prop.revision, reason)
-                do_source(feedback=reason or "rejected", excluded=rej.excluded_offer_ids,
-                          note=f"excluded {', '.join(rej.excluded_offer_ids)}")
+                do_reject(prop.revision, reason)
                 flash("info", f"r{prop.revision} rejected. No order placed. Searching again without the rejected offers.")
                 st.rerun()
     elif prop.status == "approved":
@@ -426,7 +423,7 @@ for oid, o in book.orders.items():
             flash("success", f"{oid} received: on-hand updated, nothing left pending.")
             st.rerun()
 if book.orders:
-    b0, b1 = baseline["CLAY-MATTE-100"], fc["CLAY-MATTE-100"]
+    b0, b1 = baseline["clay-matte-100ml"], fc["clay-matte-100ml"]
     protected = {b["id"] for b in b0.at_risk} - {b["id"] for b in b1.at_risk}
     rev = sum(SERVICES[b["service"]][0] for b in b0.at_risk if b["id"] in protected)
     st.success(f"{len(protected)} bookings protected · estimated booking revenue covered £{rev} "
