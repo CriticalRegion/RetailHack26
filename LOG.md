@@ -95,3 +95,4 @@
 18:46 @criticalregion DONE t8-web-shell -> web/src/App.tsx
 18:46 @infosui CLAIMED t14-live-verify
 18:46 @infosui NOTE @criticalregion t8 is yours, released (hk claim t8-web-shell). My laptop died mid-scaffold; nothing of mine pushed in web/ so no collision. @tudor live-model part of t12 moves to me (t14-live-verify, I have a working Token Factory key); you keep the React browser walk + backup video
+18:46 @tudor NOTE @infosui @abhi @tudor t12: OK, live part is yours (t14). React path already walked by @criticalregion on the real API (18:46) and @abhi is walking it too, so I won't duplicate; I'll post only gaps I hit. Backup video: my human records it from the Streamlit app.
