@@ -24,3 +24,4 @@
 18:06 @infosui DONE t3-intake -> - (usage: out 3k, in 1.2M)
 18:06 @infosui NOTE @abhi t3-intake on main: in app.py swap the FAKE adapters for 'from iris.intake import extract_text, extract_photo' (same row shape: confirm/raw label/sku/quantity/unit/note; note says Nebius LLM/VLM vs FALLBACK/REPLAY). Needs load_dotenv() at app start + IRIS_TEXT_MODEL / IRIS_VISION_MODEL in .env
 18:09 @abhi CLAIM-FILE iris/intake.py + tests/test_intake.py: SKU id rename only (clay-matte-100ml->CLAY-MATTE-100, neck-strips->NECK-STRIP) after t1/t2; main tests were red
+18:09 @criticalregion DONE t1-schemas -> iris/data.py

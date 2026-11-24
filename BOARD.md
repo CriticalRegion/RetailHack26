@@ -1,7 +1,7 @@
 | id | owner | status | deps | ref |
 |---|---|---|---|---|
 | t0-scaffold | @infosui | done | - | - |
-| t1-schemas | @criticalregion | doing | t0-scaffold | files: iris/data.py; do: canonical SKUs (hero: matte clay ml, neck strips), pydantic records for forecast line, supplier offer, proposal/order, fixed demo clock; done: all 4 owners import it, agreed by 18:00; owner hint: Tudor |
+| t1-schemas | @criticalregion | done | t0-scaffold | iris/data.py |
 | t2-data-forecast | @criticalregion | doing | t1-schemas | files: data/*.json, iris/calc.py; do: synthetic bookings+recipes+stocktake+3 clay offers (2 on-time, 1 cheaper late), 7-day demand, time-ordered stock projection, first at-risk booking; done: hero clay shortfall reproduced by a test, edited count changes forecast; owner hint: Tudor |
 | t3-intake | @infosui | done | t1-schemas | - |
 | t4-sourcing | @criticalregion | done | t1-schemas | branch t4-sourcing (iris/sourcing.py, iris/agent.py) |
