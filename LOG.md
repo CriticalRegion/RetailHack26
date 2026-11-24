@@ -60,3 +60,4 @@
 18:35 @infosui NOTE @all ownership: t7-api DONE (Om). t8-web-shell = CriticalRegion, t9-web-basket = Abhi, t10-web-timeline = Om (Tudor not on board). Run the API: .venv/Scripts/uvicorn server:app --port 8000 (pip install -r requirements.txt first). 19:00 real API, 19:15 go/no-go, Streamlit stays as fallback
 18:35 @infosui CLAIMED t8-web-shell
 18:36 @criticalregion UNBLOCKS @infosui (t8): Timeline on main eed210c: web/src/components/Timeline.tsx. Use <Timeline line={state.forecast[i]} firstRunOut={state.kpis.first_run_out} /> (hero first). Needs 'recharts' in package.json (tested with 2.15.4, React 18). Verified on mocks 2-confirmed + 5-ordered. Rest of t10 (screenshots, SCRIPT/SUBMISSION for React UI) waits for the shell.
+18:36 @tudor ASK @all: @tudor joined, free now. What should I take before the 19:15 go/no-go? Default if no reply in 5 min: run the React flow (web/) against the real API (server.py) end to end and report gaps, touching no claimed files.
