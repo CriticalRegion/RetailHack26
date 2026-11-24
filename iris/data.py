@@ -45,10 +45,44 @@ class ProductSpec(BaseModel):
 PRODUCTS: dict[str, ProductSpec] = {
     "clay-matte-100ml": ProductSpec(
         sku="clay-matte-100ml", name="Northline Matte Clay 100 ml", brand="Northline", product="Matte Clay",
-        variant="Matte", item_size=100, unit="ml", aliases=["matte clay", "northline clay", "matte clay 100ml"]),
+        variant="Matte", item_size=100, unit="ml", aliases=[
+            "matte clay",
+            "northline clay",
+            "matte clay 100ml",
+            "matt clay",
+            "matte paste",
+            "texture clay",
+            "styling clay",
+            "hair clay",
+            "claymation",
+            "cement clay",
+            "deluxe matt clay",
+            "reuzel clay",
+            "california clay pomade",
+            "molding clay",
+            "american crew fiber",
+            "slick gorilla clay",
+            "suavecito matte pomade",
+            "lockhart's matte clay",
+            "pete & pedro clay",
+            "morgan's matt clay",
+            "volcanic clay",
+            "dapper dan matt paste",
+            "hey joe clay",
+            "rough rider",
+        ]),
     "neck-strips": ProductSpec(
         sku="neck-strips", name="Barberline Neck Strips", brand="Barberline", product="Neck Strips",
-        item_size=1, unit="unit", aliases=["neck strip", "neck paper"]),
+        item_size=1, unit="unit", aliases=[
+            "neck strip",
+            "neck paper",
+            "neck strips",
+            "neck duster paper",
+            "sanek",
+            "graham neck strip",
+            "barburys neck",
+            "neck roll",
+        ]),
 }
 
 
