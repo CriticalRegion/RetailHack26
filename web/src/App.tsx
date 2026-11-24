@@ -121,8 +121,7 @@ export default function App() {
           </div>
         </section>
 
-        <section aria-labelledby="basket-h" className="space-y-3">
-          <h2 id="basket-h" className="text-lg font-semibold">3 · Supplier basket and order</h2>
+        <section aria-label="Supplier basket and order" id="basket">
           <Basket
             proposal={state.proposal}
             offers={state.offers}
