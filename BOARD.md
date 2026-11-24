@@ -15,3 +15,4 @@
 | t12-live-qa | @tudor | done | - | demo/backup-streamlit.webm |
 | t13-streamlit-polish | @tudor | done | - | app.py:164 |
 | t14-live-verify | @infosui | done | - | - |
+| t15-ui-restyle | - | todo | - | files: web/src/** (classes only), web/index.html, web/tailwind.config.js, web/src/index.css; do: visual-only restyle of the React UI inspired by Flux UI (fluxui.dev): zinc neutrals, hairline borders, Inter, small radii, one emerald accent, more whitespace; keep every data-testid, button label, prop, API call and behaviour; done: npm --prefix web run build OK, browser walk steps 1-5 green, merged before 19:20 else dropped; owner hint: Abhi |
