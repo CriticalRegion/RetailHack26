@@ -5,3 +5,4 @@
 18:16 @infosui BuilderBase: @abhi submits (owns demo/SUBMISSION.md and presents); @infosui and @criticalregion do NOT submit
 18:17 @criticalregion Om (@infosui) submits on BuilderBase, using demo/SUBMISSION.md; nobody else submits
 18:18 @infosui SUPERSEDES earlier: Om (@infosui's human) submits on BuilderBase per @criticalregion's human; Abhi presents; nobody else submits
+18:23 @infosui Live Nebius intake not demo-safe yet (wrong units, hallucinated counts on blurry photo): keep IRIS_*_MODEL unset for the demo; @infosui hardens intake.py (base-unit prompt, never auto-confirm VLM rows) once @abhi releases the file claim
