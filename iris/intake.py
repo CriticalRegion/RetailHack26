@@ -1,1 +1,144 @@
-"""Text/photo router, extraction schema, validation and SKU matching (t3-intake)."""
+"""Stock intake: modality router (photo -> VLM, text -> LLM), shared extraction schema, validation and SKU matching.
+
+Both paths return review rows for the app's data editor:
+    {"confirm", "raw label", "sku", "quantity", "unit", "note"}
+Quantities are absolute on-hand counts in the SKU's base unit (ml for clay, units for strips).
+Nothing here changes stock: the merchant confirms rows in the app first.
+If the Nebius call is not configured or fails, a labelled fallback runs (rule parser for text,
+replay for the staged photo) so the demo path still works.
+"""
+from __future__ import annotations
+
+import re
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field, ValidationError
+
+from iris import llm
+from iris.sourcing import PRODUCTS, ProductSpec
+
+Route = Literal["vlm", "llm"]
+
+
+class Observation(BaseModel):
+    """One candidate stock observation from either model."""
+    raw_label: str
+    sku: Optional[str] = None
+    count: Optional[float] = Field(default=None, description="number observed, null if unreadable")
+    count_unit: Literal["item", "base"] = "item"  # item = tubs/boxes/strips, base = ml or units already
+    evidence: str = ""
+    ambiguity: str = ""
+
+
+def route(kind: str) -> Route:
+    """Explicit modality dispatcher: the UI knows the input type."""
+    return "vlm" if kind in ("photo", "image") else "llm"
+
+
+def _catalog(products: dict[str, ProductSpec]) -> str:
+    return "\n".join(f"- sku={p.sku}: {p.brand} {p.product} {p.item_size:g} {p.unit} per item; aliases: {', '.join(p.aliases)}"
+                     for p in products.values())
+
+
+SCHEMA = ('Return only JSON: {"items":[{"raw_label":str,"sku":str|null,"count":number|null,'
+          '"count_unit":"item"|"base","evidence":str,"ambiguity":str}]}. '
+          'count_unit "item" means physical items (tubs, boxes, single strips); "base" means the count is already in ml. '
+          'Use sku only from the catalog; null if unsure. If a count is unreadable, count=null and explain in ambiguity. '
+          'Never guess a number you cannot see or read.')
+
+
+def match_sku(label: str, products: dict[str, ProductSpec]) -> Optional[str]:
+    low = label.lower()
+    for p in products.values():
+        if any(a in low for a in p.aliases) or p.product.lower() in low:
+            return p.sku
+    return None
+
+
+def to_rows(obs: list[Observation], products: dict[str, ProductSpec], source: str) -> list[dict]:
+    """Validate observations in code and convert to base-unit review rows."""
+    rows = []
+    for o in obs:
+        sku = o.sku if o.sku in products else match_sku(o.raw_label, products)
+        spec = products.get(sku) if sku else None
+        qty = o.count
+        notes = [source]
+        if spec and qty is not None:
+            if qty < 0:
+                qty, notes = None, notes + ["negative count rejected"]
+            elif o.count_unit == "item" and spec.unit == "ml":
+                qty = qty * spec.item_size
+        if o.sku and o.sku not in products:
+            notes.append(f"model SKU '{o.sku}' not in catalog")
+        if not sku:
+            notes.append("unmatched - pick a SKU")
+        if qty is None:
+            notes.append("count unknown - enter it")
+        if o.ambiguity:
+            notes.append(o.ambiguity)
+        rows.append({"confirm": bool(sku and qty is not None and not o.ambiguity), "raw label": o.raw_label,
+                     "sku": sku or "?", "quantity": qty, "unit": spec.unit if spec else "?",
+                     "note": "; ".join(notes)})
+    return rows
+
+
+def _parse_items(data: dict) -> list[Observation]:
+    out = []
+    for it in data.get("items", []):
+        try:
+            out.append(Observation(**it))
+        except ValidationError:
+            out.append(Observation(raw_label=str(it.get("raw_label", it))[:80], ambiguity="unparseable row"))
+    return out
+
+
+# ------------------------------------------------------------------ text path (LLM)
+def rule_parse(text: str) -> list[Observation]:
+    """Deterministic fallback: '2 x Matte Clay 100 ml, 35 neck strips'."""
+    obs = []
+    for part in re.split(r"[,\n;]+", text):
+        part = part.strip()
+        if not part:
+            continue
+        m = re.match(r"(\d+(?:\.\d+)?)\s*[x×]?\s*(.*)", part, re.I)
+        obs.append(Observation(raw_label=part, count=float(m.group(1)) if m else None, count_unit="item",
+                               evidence="rule parser", ambiguity="" if m else "no count found"))
+    return obs
+
+
+def extract_text(text: str, products: dict[str, ProductSpec] = PRODUCTS) -> list[dict]:
+    if llm.text_ready():
+        try:
+            data = llm.chat_json(f"You extract stock counts for a barbershop.\nCatalog:\n{_catalog(products)}\n{SCHEMA}",
+                                 f"Stock notes:\n{text}")
+            return to_rows(_parse_items(data), products, f"Nebius LLM {llm.text_model()}")
+        except Exception as e:  # noqa: BLE001
+            return to_rows(rule_parse(text), products, f"FALLBACK rule parser ({type(e).__name__})")
+    return to_rows(rule_parse(text), products, "FALLBACK rule parser (no Nebius text model)")
+
+
+# ------------------------------------------------------------------ photo path (VLM)
+REPLAY = [  # labelled replay of the staged shelf photo, used when the VLM is not available
+    Observation(raw_label="Northline Matte Clay 100ml x1 + 1 open (~20%)", sku="clay-matte-100ml", count=120,
+                count_unit="base", evidence="replay of staged photo"),
+    Observation(raw_label="Neck strips box (4 x 100)", sku="neck-strips", count=400, count_unit="base",
+                evidence="replay of staged photo"),
+]
+
+
+def extract_photo(img, products: dict[str, ProductSpec] = PRODUCTS) -> list[dict]:
+    """img: Streamlit UploadedFile, bytes, or None."""
+    data = img.getvalue() if hasattr(img, "getvalue") else img
+    mime = getattr(img, "type", None) or "image/png"
+    if data and llm.vision_ready():
+        prompt = (f"This is a barbershop stocktake photo (shelf or count sheet). Read visible product labels and counts.\n"
+                  f"Catalog:\n{_catalog(products)}\n{SCHEMA}")
+        try:
+            return to_rows(_parse_items(llm.vision_json(prompt, data, mime)), products, f"Nebius VLM {llm.vision_model()}")
+        except Exception as e:  # noqa: BLE001
+            return to_rows(REPLAY, products, f"REPLAY staged photo ({type(e).__name__})")
+    return to_rows(REPLAY, products, "REPLAY staged photo (no Nebius vision model)")
+
+
+def extract(kind: str, payload, products: dict[str, ProductSpec] = PRODUCTS) -> list[dict]:
+    return extract_photo(payload, products) if route(kind) == "vlm" else extract_text(payload, products)
