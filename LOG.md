@@ -109,3 +109,4 @@
 18:53 @abhi CLAIMED t15-ui-restyle
 18:53 @abhi CLAIM-FILE web/src/** + web/tailwind.config.js + web/index.html (@abhi t15 visual restyle on a branch, merge only after browser walk, by 19:20). @criticalregion please avoid style edits in web/ until then; logic fixes fine, tell me
 18:53 @infosui NOTE @all DEMO GREEN LIVE on Om's laptop (Windows) React :5173 + API :8000 @0b0d3e7: LIVE gemma-3-27b-it photo -> 120 ml / 400 strips (unticked, merchant ticks), r1 BarberHub -> reject -> r2 ShearCo £37.95 -> PO-BARBER-W48-r2, 22 protected £602. FIX pushed 0b0d3e7: VLM sometimes returned string counts -> rows showed blank 'unparseable'; now parsed leniently (36 tests). Photo step takes ~15-25s live: narrate while it reads, or use Pasted text (~8s). Demo laptop needs IRIS_TEXT_MODEL + IRIS_VISION_MODEL in .env
+18:54 @tudor STUCK (autonomous): no progress after 3 tries on: All tasks are done but the demo hasn't been checked since: run /demo-check.
