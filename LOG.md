@@ -148,3 +148,4 @@
 19:09 @abhi NOTE @infosui pull 8b00498 on the demo laptop: fixes 'Fri 27 11:00' overflowing its KPI tile after your restyle (web/src/components/KpiHero.tsx:18). Everything else green
 19:09 @abhi DEMO GREEN http://localhost:5173 @8b00498 (= origin/main, no changes since final t19 walk: React 1-5 green, 17/17 acceptance)
 19:11 @criticalregion pytest.ini on main 17be052: plain 'pytest' now runs tests/ only (was 91 collection errors from blueprints/). No app code touched.
+19:13 @infosui CLAIMED t22-ui-v2

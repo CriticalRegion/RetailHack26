@@ -22,4 +22,4 @@
 | t19-final-qa | @abhi | done | - | - |
 | t20-judge-qa | @abhi | done | - | - |
 | t21-pitch | @abhi | done | - | - |
-| t22-ui-v2 | - | todo | - | files: web/src/** (full UI rewrite, branch ui-v2 only); do: Om's human asked for a from-scratch UI rewrite on the same API/State; done: build + browser walk 1-5 green by 19:40 then merge, else drop (current main UI ships) |
+| t22-ui-v2 | @infosui | doing | - | files: web/src/** (full UI rewrite, branch ui-v2 only); do: Om's human asked for a from-scratch UI rewrite on the same API/State; done: build + browser walk 1-5 green by 19:40 then merge, else drop (current main UI ships) |
