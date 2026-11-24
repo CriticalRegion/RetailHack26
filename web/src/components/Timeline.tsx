@@ -79,14 +79,14 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
       : "Enough stock for the next 7 days";
 
   return (
-    <figure className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <figure className="w-full rounded-lg border border-zinc-200 bg-white p-5 shadow-xs">
       <figcaption className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-semibold text-slate-900 dark:text-slate-100">{line.name}</span>
+        <span className="text-sm font-semibold text-zinc-900">{line.name}</span>
         <span
           className={
             line.first_at_risk
-              ? "rounded-full bg-red-50 px-2.5 py-0.5 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
-              : "rounded-full bg-emerald-50 px-2.5 py-0.5 text-sm font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+              ? "inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10"
+              : "inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
           }
         >
           {status}
@@ -95,7 +95,7 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
       <div style={{ height }} aria-label={`${line.name} projected stock over the next 7 days. ${status}`} role="img">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart margin={{ top: 16, right: 16, bottom: 4, left: 4 }}>
-            <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke="#f4f4f5" vertical={false} />
             <XAxis
               dataKey="t"
               type="number"
@@ -103,19 +103,23 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
               domain={[withOrder[0]?.t ?? "dataMin", "dataMax"]}
               ticks={ticks}
               tickFormatter={day}
-              tick={{ fontSize: 12, fill: "#64748b" }}
+              tick={{ fontSize: 11, fill: "#71717a" }}
+              axisLine={{ stroke: "#e4e4e7" }}
+              tickLine={{ stroke: "#e4e4e7" }}
               allowDuplicatedCategory={false}
             />
             <YAxis
               dataKey="v"
               domain={[lo, hi]}
               ticks={Array.from({ length: Math.round((hi - lo) / step) + 1 }, (_, i) => lo + i * step)}
-              tick={{ fontSize: 12, fill: "#64748b" }}
+              tick={{ fontSize: 11, fill: "#71717a" }}
+              axisLine={{ stroke: "#e4e4e7" }}
+              tickLine={{ stroke: "#e4e4e7" }}
               tickFormatter={(v: number) => `${v}${u}`}
               width={64}
             />
-            {minV < 0 && <ReferenceArea y1={lo} y2={0} fill="#ef4444" fillOpacity={0.12} />}
-            <ReferenceLine y={0} stroke="#94a3b8" />
+            {minV < 0 && <ReferenceArea y1={lo} y2={0} fill="#ef4444" fillOpacity={0.06} />}
+            <ReferenceLine y={0} stroke="#d4d4d8" />
             <Tooltip
               labelFormatter={(t) => when(Number(t))}
               formatter={(v: number, name: string) => [`${v}${u}`, name]}
@@ -126,9 +130,9 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
                 dataKey="v"
                 name="Without the order"
                 type="stepAfter"
-                stroke="#ef4444"
+                stroke="#a1a1aa"
                 strokeDasharray="6 4"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 dot={false}
                 isAnimationActive={false}
               />
@@ -138,51 +142,51 @@ export default function Timeline({ line, firstRunOut, height = 280 }: Props) {
               dataKey="v"
               name={orderLands ? "With the order" : "Projected stock"}
               type="stepAfter"
-              stroke="#0f766e"
-              strokeWidth={2.5}
+              stroke={orderLands ? "#10b981" : "#18181b"}
+              strokeWidth={1.5}
               dot={false}
               isAnimationActive={false}
             />
             {orderLands && (
               <ReferenceLine
                 x={orderLands}
-                stroke="#0f766e"
+                stroke="#10b981"
                 strokeDasharray="2 3"
-                label={{ value: `order lands ${when(orderLands)}`, position: "insideBottomRight", fill: "#14b8a6", fontSize: 12, fontWeight: 600 }}
+                label={{ value: `order lands ${when(orderLands)}`, position: "insideBottomRight", fill: "#059669", fontSize: 11, fontWeight: 600 }}
               />
             )}
             {markerT !== null && marker && (
               <>
                 <ReferenceLine
                   x={markerT}
-                  stroke="#dc2626"
+                  stroke="#ef4444"
                   strokeWidth={1.5}
                   label={{
                     value: `${line.first_at_risk ? "first at risk" : "was at risk"}: ${when(markerT)} · ${marker.id}`,
                     position: "insideTopRight",
-                    fill: "#dc2626",
-                    fontSize: 12,
+                    fill: "#ef4444",
+                    fontSize: 11,
                     fontWeight: 600,
                   }}
                 />
-                <ReferenceDot x={markerT} y={0} r={6} fill="#dc2626" stroke="#fff" strokeWidth={2} />
+                <ReferenceDot x={markerT} y={0} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />
               </>
             )}
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <div className="mt-2 flex flex-wrap gap-4 text-xs text-zinc-500">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-0.5 w-5 bg-teal-700" /> {orderLands ? "with the order" : "projected stock"}
+          <span className={`inline-block h-0.5 w-5 ${orderLands ? "bg-emerald-500" : "bg-zinc-900"}`} /> {orderLands ? "with the order" : "projected stock"}
         </span>
         {orderLands && (
           <span className="flex items-center gap-1.5">
-            <span className="inline-block w-5 border-t-2 border-dashed border-red-500" /> without the order
+            <span className="inline-block w-5 border-t-2 border-dashed border-zinc-400" /> without the order
           </span>
         )}
         {markerT !== null && (
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-600" /> first booking that can't be served
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" /> first booking that can't be served
           </span>
         )}
       </div>

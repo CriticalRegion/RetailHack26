@@ -11,7 +11,7 @@ const STEPS: { key: State["step"]; label: string; hint: string }[] = [
 export function Stepper({ step }: { step: State["step"] }) {
   const cur = STEPS.findIndex((s) => s.key === step);
   return (
-    <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Progress">
+    <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Progress">
       {STEPS.map((s, i) => {
         const done = i < cur;
         const active = i === cur;
@@ -19,24 +19,18 @@ export function Stepper({ step }: { step: State["step"] }) {
           <li
             key={s.key}
             aria-current={active ? "step" : undefined}
-            className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${
-              active
-                ? "border-teal-600 bg-teal-50"
-                : done
-                  ? "border-slate-200 bg-white"
-                  : "border-slate-200 bg-slate-50 opacity-70"
-            }`}
+            className={`flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 shadow-xs ${active ? "" : done ? "" : "opacity-70"}`}
           >
             <span
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                active ? "bg-teal-600 text-white" : done ? "bg-teal-100 text-teal-800" : "bg-slate-200 text-slate-600"
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                active ? "bg-white text-zinc-900 ring-2 ring-zinc-900" : done ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-400"
               }`}
             >
               {done ? "✓" : i + 1}
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-slate-900">{s.label}</span>
-              <span className="block truncate text-xs text-slate-500">{s.hint}</span>
+              <span className="block text-sm font-medium text-zinc-900">{s.label}</span>
+              <span className="block truncate text-xs text-zinc-500">{s.hint}</span>
             </span>
           </li>
         );

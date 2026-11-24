@@ -11,10 +11,10 @@ import Timeline from "./components/Timeline";
 type Toast = NonNullable<State["flash"]>;
 
 const toastTone: Record<Toast["kind"], string> = {
-  success: "border-emerald-300 bg-emerald-50 text-emerald-900",
-  info: "border-sky-300 bg-sky-50 text-sky-900",
-  warning: "border-amber-300 bg-amber-50 text-amber-900",
-  error: "border-red-300 bg-red-50 text-red-900",
+  success: "bg-emerald-500",
+  info: "bg-zinc-400",
+  warning: "bg-amber-500",
+  error: "bg-red-500",
 };
 
 export default function App() {
@@ -46,7 +46,7 @@ export default function App() {
   }, [toast]);
 
   if (!state) {
-    return <main className="grid min-h-screen place-items-center text-slate-500">Loading Iris…</main>;
+    return <main className="grid min-h-screen place-items-center text-sm text-zinc-500">Loading Iris…</main>;
   }
 
   const hero = state.forecast.find((f) => f.hero);
@@ -55,37 +55,38 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
           <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              Iris <span className="font-normal text-slate-500">· never run out of what's booked</span>
+            <h1 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-900">
+              <span className="relative inline-block h-6 w-6 rounded-md bg-zinc-900"><span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-400" /></span>
+              Iris <span className="text-sm font-normal text-zinc-500">· never run out of what's booked</span>
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="mt-0.5 text-xs text-zinc-500">
               {state.shop.name} · {new Date(state.shop.clock).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} ({state.shop.tz})
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {mock && (
-              <span className="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-800" title="API not reachable: showing recorded mocks">
+              <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20" title="API not reachable: showing recorded mocks">
                 MOCK DATA
               </span>
             )}
-            <label className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5">
+            <label className="flex h-8 items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 shadow-xs">
               <input type="checkbox" checked={state.live_search} disabled={busy || mock} onChange={(e) => run(() => api.live(e.target.checked))} />
               Live supplier search
-              <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${state.live_search ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
+              <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${state.live_search ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" : "bg-zinc-50 text-zinc-600 ring-zinc-500/10"}`}>
                 {state.live_search ? "Tavily + Nebius" : "labelled fixture"}
               </span>
             </label>
-            <button disabled={busy} onClick={() => run(api.reset)} className="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50">
+            <button disabled={busy} onClick={() => run(api.reset)} className="h-8 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40">
               Reset demo
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-5 px-4 py-5">
+      <main className="mx-auto max-w-6xl space-y-8 px-6 py-8">
         <Stepper step={state.step} />
         <KpiHero kpis={state.kpis} />
 
@@ -99,11 +100,11 @@ export default function App() {
           onClear={() => run(api.clearReview)}
         />
 
-        <section aria-labelledby="fc-h" className="space-y-3">
-          <h2 id="fc-h" className="text-lg font-semibold">2 · Run-out forecast (next 7 days)</h2>
+        <section aria-labelledby="fc-h" className="space-y-4">
+          <h2 id="fc-h" className="text-base font-semibold tracking-tight text-zinc-900">2 · Run-out forecast (next 7 days)</h2>
           {hero && <Timeline line={hero} firstRunOut={state.kpis.first_run_out} height={300} />}
           {hero && Object.keys(hero.contributing).length > 0 && (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-zinc-600">
               {hero.name} demand comes from{" "}
               {Object.entries(hero.contributing).map(([svc, n], i, a) => (
                 <span key={svc}>
@@ -114,7 +115,7 @@ export default function App() {
               .
             </p>
           )}
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             {others.map((f) => (
               <Timeline key={f.sku} line={f} height={200} />
             ))}
@@ -138,10 +139,11 @@ export default function App() {
       </main>
 
       {toast && (
-        <div role="status" aria-live="polite" className={`fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border px-4 py-3 shadow-lg ${toastTone[toast.kind]}`}>
+        <div role="status" aria-live="polite" className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-card">
           <div className="flex items-start gap-3">
-            <span className="text-sm">{toast.msg}</span>
-            <button onClick={() => setToast(null)} className="ml-auto text-sm opacity-60 hover:opacity-100" aria-label="Dismiss">✕</button>
+            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${toastTone[toast.kind]}`} />
+            <span className="text-sm text-zinc-800">{toast.msg}</span>
+            <button onClick={() => setToast(null)} className="ml-auto text-sm text-zinc-500 hover:text-zinc-900" aria-label="Dismiss">✕</button>
           </div>
         </div>
       )}
