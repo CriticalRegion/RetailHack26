@@ -1,0 +1,1199 @@
+{
+ "shop": {
+  "name": "Old St Barbers (demo)",
+  "clock": "2026-11-24T09:00",
+  "tz": "Europe/London"
+ },
+ "intake": {
+  "text_model": null,
+  "vision_model": null
+ },
+ "live_search": false,
+ "products": [
+  {
+   "sku": "clay-matte-100ml",
+   "name": "Northline Matte Clay 100 ml",
+   "unit": "ml"
+  },
+  {
+   "sku": "neck-strips",
+   "name": "Barberline Neck Strips",
+   "unit": "unit"
+  }
+ ],
+ "stock": [
+  {
+   "sku": "clay-matte-100ml",
+   "name": "Northline Matte Clay 100 ml",
+   "unit": "ml",
+   "on_hand": 120.0,
+   "incoming": 0
+  },
+  {
+   "sku": "neck-strips",
+   "name": "Barberline Neck Strips",
+   "unit": "unit",
+   "on_hand": 400.0,
+   "incoming": 0
+  }
+ ],
+ "review": [],
+ "review_source": "sample photo",
+ "forecast": [
+  {
+   "sku": "clay-matte-100ml",
+   "name": "Northline Matte Clay 100 ml",
+   "unit": "ml",
+   "hero": true,
+   "usage": 223.0,
+   "on_hand": 120.0,
+   "incoming": 0,
+   "uncovered": 103.0,
+   "first_at_risk": {
+    "id": "BK-030",
+    "time": "2026-11-27T11:00",
+    "service": "Textured crop"
+   },
+   "at_risk_count": 22,
+   "at_risk": [
+    {
+     "id": "BK-030",
+     "time": "2026-11-27T11:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-031",
+     "time": "2026-11-27T12:00",
+     "service": "Skin fade"
+    },
+    {
+     "id": "BK-032",
+     "time": "2026-11-27T13:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-033",
+     "time": "2026-11-27T14:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-034",
+     "time": "2026-11-27T15:00",
+     "service": "Scissor cut"
+    },
+    {
+     "id": "BK-035",
+     "time": "2026-11-27T16:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-036",
+     "time": "2026-11-27T17:00",
+     "service": "Skin fade"
+    },
+    {
+     "id": "BK-037",
+     "time": "2026-11-28T09:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-038",
+     "time": "2026-11-28T10:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-039",
+     "time": "2026-11-28T11:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-040",
+     "time": "2026-11-28T12:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-041",
+     "time": "2026-11-28T13:00",
+     "service": "Skin fade"
+    },
+    {
+     "id": "BK-042",
+     "time": "2026-11-28T14:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-043",
+     "time": "2026-11-28T15:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-044",
+     "time": "2026-11-28T16:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-045",
+     "time": "2026-11-28T17:00",
+     "service": "Scissor cut"
+    },
+    {
+     "id": "BK-046",
+     "time": "2026-11-30T09:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-047",
+     "time": "2026-11-30T10:00",
+     "service": "Skin fade"
+    },
+    {
+     "id": "BK-048",
+     "time": "2026-11-30T11:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-049",
+     "time": "2026-11-30T12:00",
+     "service": "Scissor cut"
+    },
+    {
+     "id": "BK-050",
+     "time": "2026-11-30T13:00",
+     "service": "Textured crop"
+    },
+    {
+     "id": "BK-051",
+     "time": "2026-11-30T14:00",
+     "service": "Skin fade"
+    }
+   ],
+   "contributing": {
+    "Textured crop": 28,
+    "Skin fade": 14,
+    "Scissor cut": 9
+   },
+   "covered_by_order": false,
+   "series": [
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 120.0
+    },
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 114.0
+    },
+    {
+     "time": "2026-11-24T10:00",
+     "projected": 112.0
+    },
+    {
+     "time": "2026-11-24T11:00",
+     "projected": 106.0
+    },
+    {
+     "time": "2026-11-24T12:00",
+     "projected": 103.0
+    },
+    {
+     "time": "2026-11-24T13:00",
+     "projected": 97.0
+    },
+    {
+     "time": "2026-11-24T14:00",
+     "projected": 95.0
+    },
+    {
+     "time": "2026-11-24T15:00",
+     "projected": 89.0
+    },
+    {
+     "time": "2026-11-24T16:00",
+     "projected": 86.0
+    },
+    {
+     "time": "2026-11-24T17:00",
+     "projected": 84.0
+    },
+    {
+     "time": "2026-11-25T09:00",
+     "projected": 78.0
+    },
+    {
+     "time": "2026-11-25T10:00",
+     "projected": 76.0
+    },
+    {
+     "time": "2026-11-25T11:00",
+     "projected": 70.0
+    },
+    {
+     "time": "2026-11-25T12:00",
+     "projected": 67.0
+    },
+    {
+     "time": "2026-11-25T13:00",
+     "projected": 61.0
+    },
+    {
+     "time": "2026-11-25T14:00",
+     "projected": 59.0
+    },
+    {
+     "time": "2026-11-25T15:00",
+     "projected": 53.0
+    },
+    {
+     "time": "2026-11-25T16:00",
+     "projected": 50.0
+    },
+    {
+     "time": "2026-11-25T17:00",
+     "projected": 48.0
+    },
+    {
+     "time": "2026-11-26T09:00",
+     "projected": 46.0
+    },
+    {
+     "time": "2026-11-26T10:00",
+     "projected": 40.0
+    },
+    {
+     "time": "2026-11-26T11:00",
+     "projected": 34.0
+    },
+    {
+     "time": "2026-11-26T12:00",
+     "projected": 31.0
+    },
+    {
+     "time": "2026-11-26T13:00",
+     "projected": 29.0
+    },
+    {
+     "time": "2026-11-26T14:00",
+     "projected": 23.0
+    },
+    {
+     "time": "2026-11-26T15:00",
+     "projected": 17.0
+    },
+    {
+     "time": "2026-11-26T16:00",
+     "projected": 14.0
+    },
+    {
+     "time": "2026-11-26T17:00",
+     "projected": 12.0
+    },
+    {
+     "time": "2026-11-27T09:00",
+     "projected": 6.0
+    },
+    {
+     "time": "2026-11-27T10:00",
+     "projected": 0.0
+    },
+    {
+     "time": "2026-11-27T11:00",
+     "projected": -6.0
+    },
+    {
+     "time": "2026-11-27T12:00",
+     "projected": -8.0
+    },
+    {
+     "time": "2026-11-27T13:00",
+     "projected": -14.0
+    },
+    {
+     "time": "2026-11-27T14:00",
+     "projected": -20.0
+    },
+    {
+     "time": "2026-11-27T15:00",
+     "projected": -23.0
+    },
+    {
+     "time": "2026-11-27T16:00",
+     "projected": -29.0
+    },
+    {
+     "time": "2026-11-27T17:00",
+     "projected": -31.0
+    },
+    {
+     "time": "2026-11-28T09:00",
+     "projected": -37.0
+    },
+    {
+     "time": "2026-11-28T10:00",
+     "projected": -43.0
+    },
+    {
+     "time": "2026-11-28T11:00",
+     "projected": -49.0
+    },
+    {
+     "time": "2026-11-28T12:00",
+     "projected": -55.0
+    },
+    {
+     "time": "2026-11-28T13:00",
+     "projected": -57.0
+    },
+    {
+     "time": "2026-11-28T14:00",
+     "projected": -63.0
+    },
+    {
+     "time": "2026-11-28T15:00",
+     "projected": -69.0
+    },
+    {
+     "time": "2026-11-28T16:00",
+     "projected": -75.0
+    },
+    {
+     "time": "2026-11-28T17:00",
+     "projected": -78.0
+    },
+    {
+     "time": "2026-11-30T09:00",
+     "projected": -84.0
+    },
+    {
+     "time": "2026-11-30T10:00",
+     "projected": -86.0
+    },
+    {
+     "time": "2026-11-30T11:00",
+     "projected": -92.0
+    },
+    {
+     "time": "2026-11-30T12:00",
+     "projected": -95.0
+    },
+    {
+     "time": "2026-11-30T13:00",
+     "projected": -101.0
+    },
+    {
+     "time": "2026-11-30T14:00",
+     "projected": -103.0
+    }
+   ],
+   "series_without_order": [
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 120.0
+    },
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 114.0
+    },
+    {
+     "time": "2026-11-24T10:00",
+     "projected": 112.0
+    },
+    {
+     "time": "2026-11-24T11:00",
+     "projected": 106.0
+    },
+    {
+     "time": "2026-11-24T12:00",
+     "projected": 103.0
+    },
+    {
+     "time": "2026-11-24T13:00",
+     "projected": 97.0
+    },
+    {
+     "time": "2026-11-24T14:00",
+     "projected": 95.0
+    },
+    {
+     "time": "2026-11-24T15:00",
+     "projected": 89.0
+    },
+    {
+     "time": "2026-11-24T16:00",
+     "projected": 86.0
+    },
+    {
+     "time": "2026-11-24T17:00",
+     "projected": 84.0
+    },
+    {
+     "time": "2026-11-25T09:00",
+     "projected": 78.0
+    },
+    {
+     "time": "2026-11-25T10:00",
+     "projected": 76.0
+    },
+    {
+     "time": "2026-11-25T11:00",
+     "projected": 70.0
+    },
+    {
+     "time": "2026-11-25T12:00",
+     "projected": 67.0
+    },
+    {
+     "time": "2026-11-25T13:00",
+     "projected": 61.0
+    },
+    {
+     "time": "2026-11-25T14:00",
+     "projected": 59.0
+    },
+    {
+     "time": "2026-11-25T15:00",
+     "projected": 53.0
+    },
+    {
+     "time": "2026-11-25T16:00",
+     "projected": 50.0
+    },
+    {
+     "time": "2026-11-25T17:00",
+     "projected": 48.0
+    },
+    {
+     "time": "2026-11-26T09:00",
+     "projected": 46.0
+    },
+    {
+     "time": "2026-11-26T10:00",
+     "projected": 40.0
+    },
+    {
+     "time": "2026-11-26T11:00",
+     "projected": 34.0
+    },
+    {
+     "time": "2026-11-26T12:00",
+     "projected": 31.0
+    },
+    {
+     "time": "2026-11-26T13:00",
+     "projected": 29.0
+    },
+    {
+     "time": "2026-11-26T14:00",
+     "projected": 23.0
+    },
+    {
+     "time": "2026-11-26T15:00",
+     "projected": 17.0
+    },
+    {
+     "time": "2026-11-26T16:00",
+     "projected": 14.0
+    },
+    {
+     "time": "2026-11-26T17:00",
+     "projected": 12.0
+    },
+    {
+     "time": "2026-11-27T09:00",
+     "projected": 6.0
+    },
+    {
+     "time": "2026-11-27T10:00",
+     "projected": 0.0
+    },
+    {
+     "time": "2026-11-27T11:00",
+     "projected": -6.0
+    },
+    {
+     "time": "2026-11-27T12:00",
+     "projected": -8.0
+    },
+    {
+     "time": "2026-11-27T13:00",
+     "projected": -14.0
+    },
+    {
+     "time": "2026-11-27T14:00",
+     "projected": -20.0
+    },
+    {
+     "time": "2026-11-27T15:00",
+     "projected": -23.0
+    },
+    {
+     "time": "2026-11-27T16:00",
+     "projected": -29.0
+    },
+    {
+     "time": "2026-11-27T17:00",
+     "projected": -31.0
+    },
+    {
+     "time": "2026-11-28T09:00",
+     "projected": -37.0
+    },
+    {
+     "time": "2026-11-28T10:00",
+     "projected": -43.0
+    },
+    {
+     "time": "2026-11-28T11:00",
+     "projected": -49.0
+    },
+    {
+     "time": "2026-11-28T12:00",
+     "projected": -55.0
+    },
+    {
+     "time": "2026-11-28T13:00",
+     "projected": -57.0
+    },
+    {
+     "time": "2026-11-28T14:00",
+     "projected": -63.0
+    },
+    {
+     "time": "2026-11-28T15:00",
+     "projected": -69.0
+    },
+    {
+     "time": "2026-11-28T16:00",
+     "projected": -75.0
+    },
+    {
+     "time": "2026-11-28T17:00",
+     "projected": -78.0
+    },
+    {
+     "time": "2026-11-30T09:00",
+     "projected": -84.0
+    },
+    {
+     "time": "2026-11-30T10:00",
+     "projected": -86.0
+    },
+    {
+     "time": "2026-11-30T11:00",
+     "projected": -92.0
+    },
+    {
+     "time": "2026-11-30T12:00",
+     "projected": -95.0
+    },
+    {
+     "time": "2026-11-30T13:00",
+     "projected": -101.0
+    },
+    {
+     "time": "2026-11-30T14:00",
+     "projected": -103.0
+    }
+   ]
+  },
+  {
+   "sku": "neck-strips",
+   "name": "Barberline Neck Strips",
+   "unit": "unit",
+   "hero": false,
+   "usage": 51.0,
+   "on_hand": 400.0,
+   "incoming": 0,
+   "uncovered": 0.0,
+   "first_at_risk": null,
+   "at_risk_count": 0,
+   "at_risk": [],
+   "contributing": {
+    "Textured crop": 28,
+    "Skin fade": 14,
+    "Scissor cut": 9
+   },
+   "covered_by_order": false,
+   "series": [
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 400.0
+    },
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 399.0
+    },
+    {
+     "time": "2026-11-24T10:00",
+     "projected": 398.0
+    },
+    {
+     "time": "2026-11-24T11:00",
+     "projected": 397.0
+    },
+    {
+     "time": "2026-11-24T12:00",
+     "projected": 396.0
+    },
+    {
+     "time": "2026-11-24T13:00",
+     "projected": 395.0
+    },
+    {
+     "time": "2026-11-24T14:00",
+     "projected": 394.0
+    },
+    {
+     "time": "2026-11-24T15:00",
+     "projected": 393.0
+    },
+    {
+     "time": "2026-11-24T16:00",
+     "projected": 392.0
+    },
+    {
+     "time": "2026-11-24T17:00",
+     "projected": 391.0
+    },
+    {
+     "time": "2026-11-25T09:00",
+     "projected": 390.0
+    },
+    {
+     "time": "2026-11-25T10:00",
+     "projected": 389.0
+    },
+    {
+     "time": "2026-11-25T11:00",
+     "projected": 388.0
+    },
+    {
+     "time": "2026-11-25T12:00",
+     "projected": 387.0
+    },
+    {
+     "time": "2026-11-25T13:00",
+     "projected": 386.0
+    },
+    {
+     "time": "2026-11-25T14:00",
+     "projected": 385.0
+    },
+    {
+     "time": "2026-11-25T15:00",
+     "projected": 384.0
+    },
+    {
+     "time": "2026-11-25T16:00",
+     "projected": 383.0
+    },
+    {
+     "time": "2026-11-25T17:00",
+     "projected": 382.0
+    },
+    {
+     "time": "2026-11-26T09:00",
+     "projected": 381.0
+    },
+    {
+     "time": "2026-11-26T10:00",
+     "projected": 380.0
+    },
+    {
+     "time": "2026-11-26T11:00",
+     "projected": 379.0
+    },
+    {
+     "time": "2026-11-26T12:00",
+     "projected": 378.0
+    },
+    {
+     "time": "2026-11-26T13:00",
+     "projected": 377.0
+    },
+    {
+     "time": "2026-11-26T14:00",
+     "projected": 376.0
+    },
+    {
+     "time": "2026-11-26T15:00",
+     "projected": 375.0
+    },
+    {
+     "time": "2026-11-26T16:00",
+     "projected": 374.0
+    },
+    {
+     "time": "2026-11-26T17:00",
+     "projected": 373.0
+    },
+    {
+     "time": "2026-11-27T09:00",
+     "projected": 372.0
+    },
+    {
+     "time": "2026-11-27T10:00",
+     "projected": 371.0
+    },
+    {
+     "time": "2026-11-27T11:00",
+     "projected": 370.0
+    },
+    {
+     "time": "2026-11-27T12:00",
+     "projected": 369.0
+    },
+    {
+     "time": "2026-11-27T13:00",
+     "projected": 368.0
+    },
+    {
+     "time": "2026-11-27T14:00",
+     "projected": 367.0
+    },
+    {
+     "time": "2026-11-27T15:00",
+     "projected": 366.0
+    },
+    {
+     "time": "2026-11-27T16:00",
+     "projected": 365.0
+    },
+    {
+     "time": "2026-11-27T17:00",
+     "projected": 364.0
+    },
+    {
+     "time": "2026-11-28T09:00",
+     "projected": 363.0
+    },
+    {
+     "time": "2026-11-28T10:00",
+     "projected": 362.0
+    },
+    {
+     "time": "2026-11-28T11:00",
+     "projected": 361.0
+    },
+    {
+     "time": "2026-11-28T12:00",
+     "projected": 360.0
+    },
+    {
+     "time": "2026-11-28T13:00",
+     "projected": 359.0
+    },
+    {
+     "time": "2026-11-28T14:00",
+     "projected": 358.0
+    },
+    {
+     "time": "2026-11-28T15:00",
+     "projected": 357.0
+    },
+    {
+     "time": "2026-11-28T16:00",
+     "projected": 356.0
+    },
+    {
+     "time": "2026-11-28T17:00",
+     "projected": 355.0
+    },
+    {
+     "time": "2026-11-30T09:00",
+     "projected": 354.0
+    },
+    {
+     "time": "2026-11-30T10:00",
+     "projected": 353.0
+    },
+    {
+     "time": "2026-11-30T11:00",
+     "projected": 352.0
+    },
+    {
+     "time": "2026-11-30T12:00",
+     "projected": 351.0
+    },
+    {
+     "time": "2026-11-30T13:00",
+     "projected": 350.0
+    },
+    {
+     "time": "2026-11-30T14:00",
+     "projected": 349.0
+    }
+   ],
+   "series_without_order": [
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 400.0
+    },
+    {
+     "time": "2026-11-24T09:00",
+     "projected": 399.0
+    },
+    {
+     "time": "2026-11-24T10:00",
+     "projected": 398.0
+    },
+    {
+     "time": "2026-11-24T11:00",
+     "projected": 397.0
+    },
+    {
+     "time": "2026-11-24T12:00",
+     "projected": 396.0
+    },
+    {
+     "time": "2026-11-24T13:00",
+     "projected": 395.0
+    },
+    {
+     "time": "2026-11-24T14:00",
+     "projected": 394.0
+    },
+    {
+     "time": "2026-11-24T15:00",
+     "projected": 393.0
+    },
+    {
+     "time": "2026-11-24T16:00",
+     "projected": 392.0
+    },
+    {
+     "time": "2026-11-24T17:00",
+     "projected": 391.0
+    },
+    {
+     "time": "2026-11-25T09:00",
+     "projected": 390.0
+    },
+    {
+     "time": "2026-11-25T10:00",
+     "projected": 389.0
+    },
+    {
+     "time": "2026-11-25T11:00",
+     "projected": 388.0
+    },
+    {
+     "time": "2026-11-25T12:00",
+     "projected": 387.0
+    },
+    {
+     "time": "2026-11-25T13:00",
+     "projected": 386.0
+    },
+    {
+     "time": "2026-11-25T14:00",
+     "projected": 385.0
+    },
+    {
+     "time": "2026-11-25T15:00",
+     "projected": 384.0
+    },
+    {
+     "time": "2026-11-25T16:00",
+     "projected": 383.0
+    },
+    {
+     "time": "2026-11-25T17:00",
+     "projected": 382.0
+    },
+    {
+     "time": "2026-11-26T09:00",
+     "projected": 381.0
+    },
+    {
+     "time": "2026-11-26T10:00",
+     "projected": 380.0
+    },
+    {
+     "time": "2026-11-26T11:00",
+     "projected": 379.0
+    },
+    {
+     "time": "2026-11-26T12:00",
+     "projected": 378.0
+    },
+    {
+     "time": "2026-11-26T13:00",
+     "projected": 377.0
+    },
+    {
+     "time": "2026-11-26T14:00",
+     "projected": 376.0
+    },
+    {
+     "time": "2026-11-26T15:00",
+     "projected": 375.0
+    },
+    {
+     "time": "2026-11-26T16:00",
+     "projected": 374.0
+    },
+    {
+     "time": "2026-11-26T17:00",
+     "projected": 373.0
+    },
+    {
+     "time": "2026-11-27T09:00",
+     "projected": 372.0
+    },
+    {
+     "time": "2026-11-27T10:00",
+     "projected": 371.0
+    },
+    {
+     "time": "2026-11-27T11:00",
+     "projected": 370.0
+    },
+    {
+     "time": "2026-11-27T12:00",
+     "projected": 369.0
+    },
+    {
+     "time": "2026-11-27T13:00",
+     "projected": 368.0
+    },
+    {
+     "time": "2026-11-27T14:00",
+     "projected": 367.0
+    },
+    {
+     "time": "2026-11-27T15:00",
+     "projected": 366.0
+    },
+    {
+     "time": "2026-11-27T16:00",
+     "projected": 365.0
+    },
+    {
+     "time": "2026-11-27T17:00",
+     "projected": 364.0
+    },
+    {
+     "time": "2026-11-28T09:00",
+     "projected": 363.0
+    },
+    {
+     "time": "2026-11-28T10:00",
+     "projected": 362.0
+    },
+    {
+     "time": "2026-11-28T11:00",
+     "projected": 361.0
+    },
+    {
+     "time": "2026-11-28T12:00",
+     "projected": 360.0
+    },
+    {
+     "time": "2026-11-28T13:00",
+     "projected": 359.0
+    },
+    {
+     "time": "2026-11-28T14:00",
+     "projected": 358.0
+    },
+    {
+     "time": "2026-11-28T15:00",
+     "projected": 357.0
+    },
+    {
+     "time": "2026-11-28T16:00",
+     "projected": 356.0
+    },
+    {
+     "time": "2026-11-28T17:00",
+     "projected": 355.0
+    },
+    {
+     "time": "2026-11-30T09:00",
+     "projected": 354.0
+    },
+    {
+     "time": "2026-11-30T10:00",
+     "projected": 353.0
+    },
+    {
+     "time": "2026-11-30T11:00",
+     "projected": 352.0
+    },
+    {
+     "time": "2026-11-30T12:00",
+     "projected": 351.0
+    },
+    {
+     "time": "2026-11-30T13:00",
+     "projected": 350.0
+    },
+    {
+     "time": "2026-11-30T14:00",
+     "projected": 349.0
+    }
+   ]
+  }
+ ],
+ "kpis": {
+  "bookings_at_risk": 22,
+  "first_run_out": {
+   "id": "BK-030",
+   "time": "2026-11-27T11:00",
+   "service": "Textured crop"
+  },
+  "hero_covered": false,
+  "basket_total": 37.95,
+  "bookings_protected": 0,
+  "revenue_covered": 0,
+  "orders": 0
+ },
+ "step": "basket",
+ "proposal": {
+  "basket_id": "BARBER-W48",
+  "revision": 2,
+  "status": "proposed",
+  "total": 37.95,
+  "feedback": "not BarberHub, they were late last time",
+  "excluded_offer_ids": [
+   "fx-clay-barberhub"
+  ],
+  "change_note": "Northline Matte Clay 100 ml: BarberHub → ShearCo Supply · Basket total: £26.50 → £37.95",
+  "lines": [
+   {
+    "sku": "clay-matte-100ml",
+    "product": "Northline Matte Clay 100 ml",
+    "unit": "ml",
+    "offer_id": "fx-clay-shearco",
+    "supplier": "ShearCo Supply",
+    "packs": 1,
+    "units_per_pack": 300.0,
+    "pack_price": 33.0,
+    "shipping": 4.95,
+    "total": 37.95,
+    "eta": "2026-11-26T09:00",
+    "source": "FIXTURE: Northline Matte Clay 100ml (3-pack) (ShearCo Supply)",
+    "reason": "1 × Northline Matte Clay 100ml (3-pack) from ShearCo Supply: £37.95 delivered, arrives Thu 26 Nov 09:00, covering 103 ml short before booking BK-030 (Fri 27 Nov 11:00)."
+   }
+  ]
+ },
+ "offers": [
+  {
+   "sku": "clay-matte-100ml",
+   "product": "Northline Matte Clay 100 ml",
+   "unit": "ml",
+   "status": "proposed",
+   "reason": "1 × Northline Matte Clay 100ml (3-pack) from ShearCo Supply: £37.95 delivered, arrives Thu 26 Nov 09:00, covering 103 ml short before booking BK-030 (Fri 27 Nov 11:00).",
+   "query": "Northline Matte Clay 100ml UK",
+   "options": [
+    {
+     "tag": "selected",
+     "offer_id": "fx-clay-shearco",
+     "supplier": "ShearCo Supply",
+     "listing": "Northline Matte Clay 100ml (3-pack)",
+     "packs": 1,
+     "delivered_cost": 37.95,
+     "per_100ml": 12.65,
+     "eta": "2026-11-26T09:00",
+     "on_time": true,
+     "misses_bookings": 0,
+     "evidence_url": null,
+     "evidence_label": "FIXTURE: Northline Matte Clay 100ml (3-pack) (ShearCo Supply)",
+     "issues": []
+    },
+    {
+     "tag": "late",
+     "offer_id": "fx-clay-bulkbarber",
+     "supplier": "BulkBarber Wholesale",
+     "listing": "Northline Matte Clay 100ml x6",
+     "packs": 1,
+     "delivered_cost": 54.0,
+     "per_100ml": 9.0,
+     "eta": "2026-11-30T09:00",
+     "on_time": false,
+     "misses_bookings": 16,
+     "evidence_url": null,
+     "evidence_label": "FIXTURE: Northline Matte Clay 100ml x6 (BulkBarber Wholesale)",
+     "issues": []
+    },
+    {
+     "tag": "lead",
+     "offer_id": "fx-clay-barberhub",
+     "supplier": "BarberHub",
+     "listing": "Northline Matte Clay 100 ml",
+     "packs": 2,
+     "delivered_cost": 26.5,
+     "per_100ml": 13.25,
+     "eta": "2026-11-25T09:00",
+     "on_time": true,
+     "misses_bookings": 0,
+     "evidence_url": null,
+     "evidence_label": "FIXTURE: Northline Matte Clay 100 ml (BarberHub)",
+     "issues": [
+      "rejected by merchant",
+      "supplier excluded by merchant"
+     ]
+    },
+    {
+     "tag": "lead",
+     "offer_id": "fx-clay-wrongsize",
+     "supplier": "GroomDirect",
+     "listing": "Northline Matte Clay 75ml travel size",
+     "packs": 2,
+     "delivered_cost": 18.97,
+     "per_100ml": 12.65,
+     "eta": "2026-11-25T09:00",
+     "on_time": true,
+     "misses_bookings": 0,
+     "evidence_url": null,
+     "evidence_label": "FIXTURE: Northline Matte Clay 75ml travel size (GroomDirect)",
+     "issues": [
+      "wrong size: 75 ml, need 100 ml"
+     ]
+    },
+    {
+     "tag": "lead",
+     "offer_id": "fx-clay-noeta",
+     "supplier": "MarketSeller42",
+     "listing": "Northline Matte Clay 100ml",
+     "packs": 2,
+     "delivered_cost": 18.98,
+     "per_100ml": 9.49,
+     "eta": null,
+     "on_time": null,
+     "misses_bookings": 0,
+     "evidence_url": null,
+     "evidence_label": "FIXTURE: Northline Matte Clay 100ml (MarketSeller42)",
+     "issues": [
+      "shipping cost not shown",
+      "delivery date unknown"
+     ]
+    }
+   ]
+  }
+ ],
+ "history": [
+  {
+   "revision": 1,
+   "status": "rejected",
+   "total": 26.5,
+   "lines": [
+    "BarberHub × 2"
+   ],
+   "note": "not BarberHub, they were late last time"
+  },
+  {
+   "revision": 2,
+   "status": "proposed",
+   "total": 37.95,
+   "lines": [
+    "ShearCo Supply × 1"
+   ],
+   "note": "Northline Matte Clay 100 ml: BarberHub → ShearCo Supply · Basket total: £26.50 → £37.95"
+  }
+ ],
+ "orders": [],
+ "flash": {
+  "kind": "info",
+  "msg": "r1 rejected. No order placed. Searched again without the rejected offers."
+ }
+}
