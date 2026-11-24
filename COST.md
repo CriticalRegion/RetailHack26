@@ -1,4 +1,4 @@
 | id | usage |
 |---|---|
-| @abhi | 0.71 |
+| @abhi | 0.76 |
 | @infosui | sonnet out=30k  |
