@@ -23,3 +23,7 @@
 **Repo:** https://github.com/CriticalRegion/RetailHack26
 
 **Team:** Abhi, Om, CriticalRegion, Tudor
+
+---
+
+**Add to "What we built" only if the React UI is demoed (19:15 go):** The owner works in a React front end (Vite, Tailwind, Recharts run-out chart) over a small FastAPI JSON API, so all business logic stays in the tested Python modules. A Streamlit version of the same flow is the fallback.
