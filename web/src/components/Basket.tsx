@@ -1,43 +1,72 @@
 import { useState } from "react";
-import type { Order, Proposal } from "./basketTypes";
+import type { HistoryRow, Kpis, OfferBlock, Order, Proposal } from "./basketTypes";
 import { OfferCard, gbp, when } from "./OfferCard";
 import { OrderConfirm } from "./OrderConfirm";
 
-/** Supplier basket: proposed offers, reject with feedback (r1 -> r2), approve, order confirmation.
- *  Presentation only: the parent owns API calls and passes the latest proposal/order back in. */
+/** Supplier basket (demo steps 3-5). Pure: renders State slices, calls back for actions.
+ *  The parent posts /api/reject, /api/approve, /api/received and replaces State with the response. */
 export function Basket({
   proposal,
-  previous,
-  order,
+  offers,
+  history,
+  orders,
+  kpis,
   busy = false,
-  error,
-  atRiskTimes = [],
+  onRun,
   onReject,
   onApprove,
+  onReceived,
 }: {
-  proposal: Proposal;
-  previous?: Proposal | null; // revision before this one, for the "what changed" panel
-  order?: Order | null;
+  proposal: Proposal | null;
+  offers: OfferBlock[];
+  history: HistoryRow[];
+  orders: Order[];
+  kpis: Kpis;
   busy?: boolean;
-  error?: string | null;
-  atRiskTimes?: string[]; // ISO times of at-risk bookings, to count what a late offer misses
-  onReject: (feedback: string) => void;
+  onRun?: () => void;
+  onReject: (revision: number, feedback: string) => void;
   onApprove: (revision: number) => void;
+  onReceived?: (orderId: string) => void;
 }) {
   const [feedback, setFeedback] = useState("");
-  const [showAll, setShowAll] = useState(false);
+  const [showLeads, setShowLeads] = useState(false);
+
+  if (!proposal) {
+    return (
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center" data-testid="basket-empty">
+        <p className="text-slate-600">
+          {kpis.bookings_at_risk > 0
+            ? `${kpis.bookings_at_risk} bookings at risk. Let Iris find suppliers that deliver in time.`
+            : "No shortages: nothing to order."}
+        </p>
+        {onRun && kpis.bookings_at_risk > 0 && (
+          <button
+            type="button"
+            onClick={onRun}
+            disabled={busy}
+            className="mt-4 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+            data-testid="run"
+          >
+            Run Iris: find suppliers
+          </button>
+        )}
+      </section>
+    );
+  }
+
+  const order = orders.find((o) => o.revision === proposal.revision) ?? null;
   const open = proposal.status === "proposed" && !order;
-  const orderable = proposal.lines.some((l) => l.status !== "unmet" && l.selected);
-  const missedBy = (eta?: string | null) =>
-    eta ? atRiskTimes.filter((t) => new Date(t) < new Date(eta)).length : undefined;
+  const orderable = proposal.lines.length > 0;
+  const leads = offers.flatMap((b) => b.options.filter((o) => o.tag === "lead"));
 
   return (
     <section className="space-y-5" data-testid="basket">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Supplier basket</h2>
           <p className="text-sm text-slate-500">
-            Proposal r{proposal.revision} · <span className="uppercase">{proposal.status}</span>
+            Proposal r{proposal.revision} · <span className="font-medium uppercase">{proposal.status}</span>
+            {kpis.orders === 0 && " · no order placed"}
           </p>
         </div>
         <div className="text-right">
@@ -51,85 +80,77 @@ export function Basket({
       {proposal.revision > 1 && (
         <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm" data-testid="revision-diff">
           <div className="font-semibold text-sky-900">
-            Revised r{proposal.revision - 1} → r{proposal.revision} after your feedback
+            r{proposal.revision - 1} rejected → r{proposal.revision}
           </div>
-          {proposal.feedback.length > 0 && (
-            <p className="mt-1 text-sky-900">“{proposal.feedback[proposal.feedback.length - 1]}”</p>
+          {proposal.feedback && <p className="mt-1 italic text-sky-900">“{proposal.feedback}”</p>}
+          {proposal.change_note && (
+            <ul className="mt-2 list-disc pl-5 text-sky-800">
+              {proposal.change_note.split(" · ").map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
           )}
-          <ul className="mt-2 list-disc pl-5 text-sky-800">
-            {(proposal.changes ?? []).map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-            {previous && !proposal.changes?.length && (
-              <li>
-                Basket total: {gbp(previous.total)} → {gbp(proposal.total)}
-              </li>
-            )}
-          </ul>
           {proposal.excluded_offer_ids.length > 0 && (
-            <p className="mt-2 text-xs text-sky-700">Excluded: {proposal.excluded_offer_ids.join(", ")}</p>
+            <p className="mt-2 text-xs text-sky-700">Excluded offers: {proposal.excluded_offer_ids.join(", ")}</p>
           )}
-          {!order && <p className="mt-1 text-xs font-medium text-sky-700">No order has been placed.</p>}
         </div>
       )}
 
-      {proposal.lines.map((l) => (
-        <div key={l.sku} className="space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="font-semibold text-slate-800">{l.product}</h3>
-            <span className="text-sm text-slate-500">
-              short {l.shortage.required_qty} {l.unit} before {when(l.shortage.need_by)}
-              {l.shortage.first_at_risk_booking_id ? ` (${l.shortage.first_at_risk_booking_id})` : ""}
-            </span>
-          </div>
-
-          {l.status === "unmet" || !l.selected ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" data-testid="unmet">
-              <div className="font-semibold">No on-time offer left</div>
-              <p className="mt-1">{l.reason}</p>
-            </div>
-          ) : (
-            <OfferCard r={l.selected} tag="selected" unit={l.unit} reason={l.reason} />
-          )}
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {l.alternative && <OfferCard r={l.alternative} tag="alternative" unit={l.unit} compact />}
-            {l.late_option && (
-              <OfferCard
-                r={l.late_option}
-                tag="late"
-                unit={l.unit}
-                compact
-                missed={missedBy(l.late_option.offer.eta)}
-              />
+      {offers.map((b) => {
+        const sel = b.options.find((o) => o.tag === "selected");
+        const others = b.options.filter((o) => o.tag === "alternative" || o.tag === "late");
+        return (
+          <div key={b.sku} className="space-y-3">
+            <h3 className="font-semibold text-slate-800">
+              {b.product}
+              {kpis.first_run_out && (
+                <span className="ml-2 text-sm font-normal text-slate-500">
+                  needed before {when(kpis.first_run_out.time)} ({kpis.first_run_out.id}{" "}
+                  {kpis.first_run_out.service.toLowerCase()})
+                </span>
+              )}
+            </h3>
+            {b.status === "unmet" || !sel ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" data-testid="unmet">
+                <div className="font-semibold">No on-time offer left</div>
+                <p className="mt-1">{b.reason}</p>
+              </div>
+            ) : (
+              <OfferCard o={sel} reason={b.reason} />
+            )}
+            {others.length > 0 && (
+              <div className="grid gap-3 md:grid-cols-2">
+                {others.map((o) => (
+                  <OfferCard key={o.offer_id} o={o} compact />
+                ))}
+              </div>
             )}
           </div>
+        );
+      })}
 
-          {l.leads.length > 0 && (
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowAll((v) => !v)}
-                className="text-xs text-slate-500 underline hover:text-slate-700"
-              >
-                {showAll ? "Hide" : "Show"} {l.leads.length} listing{l.leads.length === 1 ? "" : "s"} kept as leads
-              </button>
-              {showAll && (
-                <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  {l.leads.map((r) => (
-                    <OfferCard key={r.offer.offer_id} r={r} tag="lead" unit={l.unit} compact />
-                  ))}
-                </div>
-              )}
+      {leads.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowLeads((v) => !v)}
+            className="text-xs text-slate-500 underline hover:text-slate-700"
+          >
+            {showLeads ? "Hide" : "Show"} {leads.length} listing{leads.length === 1 ? "" : "s"} kept as leads (wrong size,
+            no delivery date…)
+          </button>
+          {showLeads && (
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              {leads.map((o) => (
+                <OfferCard key={o.offer_id} o={o} compact />
+              ))}
             </div>
           )}
         </div>
-      ))}
-
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      )}
 
       {open && (
-        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
           <button
             type="button"
             onClick={() => onApprove(proposal.revision)}
@@ -143,16 +164,16 @@ export function Basket({
             className="flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              onReject(feedback.trim());
+              onReject(proposal.revision, feedback.trim());
               setFeedback("");
             }}
           >
             <input
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Reject with feedback, e.g. not BarberHub, they were late last time"
-              className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-slate-500 focus:outline-none"
+              placeholder="Why? e.g. not BarberHub, they were late last time"
               aria-label="Reject with feedback"
+              className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-slate-500 focus:outline-none"
             />
             <button
               type="submit"
@@ -166,7 +187,34 @@ export function Basket({
         </div>
       )}
 
-      {order && <OrderConfirm order={order} busy={busy} onApproveAgain={() => onApprove(order.revision)} />}
+      {order && (
+        <OrderConfirm
+          order={order}
+          kpis={kpis}
+          busy={busy}
+          onApproveAgain={() => onApprove(order.revision)}
+          onReceived={onReceived}
+        />
+      )}
+
+      {history.length > 1 && (
+        <details className="text-sm text-slate-600">
+          <summary className="cursor-pointer text-slate-500">Revision history</summary>
+          <table className="mt-2 w-full text-left">
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.revision} className="border-t border-slate-100">
+                  <td className="py-1 pr-3 font-medium">r{h.revision}</td>
+                  <td className="pr-3">{h.status}</td>
+                  <td className="pr-3 tabular-nums">{gbp(h.total)}</td>
+                  <td className="pr-3">{h.lines.join(", ")}</td>
+                  <td className="text-slate-500">{h.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
     </section>
   );
 }
