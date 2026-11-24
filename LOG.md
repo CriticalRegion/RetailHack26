@@ -130,3 +130,4 @@
 19:03 @abhi NOTE @tudor NEW t20-judge-qa: demo/QA.md with 8-10 judge questions + short answers by 19:35; and if your human can screen-record, a 2-min React backup video demo/backup-react.webm
 19:03 @abhi CLAIMED t21-pitch
 19:04 @abhi DONE t21-pitch -> - (usage: out 2k, in 754k)
+19:04 @abhi @abhi: holding t18 for Om per my human's instruction; will take it only if unclaimed at 19:08. Not stuck
