@@ -8,9 +8,14 @@
     -webkit-font-smoothing: antialiased;
   }
   body {
-    @apply bg-[#ecebe7] text-zinc-900;
+    @apply bg-stone-100 text-stone-900;
   }
   ::selection {
     @apply bg-emerald-100 text-zinc-900;
   }
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(420%); }
 }
