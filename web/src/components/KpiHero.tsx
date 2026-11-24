@@ -2,20 +2,21 @@
 import type { Kpis } from "./basketTypes";
 import { gbp, when } from "./OfferCard";
 
-function Tile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone: "red" | "green" | "slate" }) {
-  const tones = {
-    red: "bg-red-500",
-    green: "bg-emerald-500",
-    slate: "bg-zinc-300",
+function Tile({ label, value, sub, tone, dark = false }: { label: string; value: string; sub?: string; tone: "red" | "green" | "slate"; dark?: boolean }) {
+  const pill = {
+    red: dark ? "bg-[#ff8a7a] text-zinc-900" : "bg-red-100 text-red-700",
+    green: "bg-[#d9f36a] text-zinc-900",
+    slate: dark ? "bg-white/10 text-zinc-300" : "bg-[#ece8ff] text-[#5b4bc4]",
   };
+  const word = { red: "at risk", green: "covered", slate: "info" };
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-xs">
-      <div className="flex items-center gap-2 text-xs font-medium text-zinc-500">
-        <span className={`h-1.5 w-1.5 rounded-full ${tones[tone]}`} />
-        {label}
+    <div className={`flex min-h-[150px] flex-col justify-between rounded-[28px] p-6 ${dark ? "bg-zinc-900 text-white" : "bg-white text-zinc-900"}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`text-sm font-medium ${dark ? "text-zinc-300" : "text-zinc-500"}`}>{label}</span>
+        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${pill[tone]}`}>{word[tone]}</span>
       </div>
-      <div className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-zinc-900">{value}</div>
-      {sub && <div className="mt-1 text-sm text-zinc-500">{sub}</div>}
+      <div className="mt-4 whitespace-nowrap text-4xl font-semibold tabular-nums tracking-tight xl:text-5xl">{value}</div>
+      {sub && <div className={`mt-2 text-sm ${dark ? "text-zinc-400" : "text-zinc-500"}`}>{sub}</div>}
     </div>
   );
 }
@@ -26,13 +27,14 @@ export function KpiHero({ kpis }: { kpis: Kpis }) {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Key numbers">
       {covered ? (
-        <Tile label="Bookings protected" value={String(kpis.bookings_protected)} sub={`${gbp(kpis.revenue_covered)} booking revenue covered`} tone="green" />
+        <Tile label="Bookings protected" value={String(kpis.bookings_protected)} sub={`${gbp(kpis.revenue_covered)} booking revenue covered`} tone="green" dark />
       ) : (
         <Tile
           label="Bookings at risk"
           value={String(kpis.bookings_at_risk)}
           sub={kpis.bookings_at_risk ? "can't be served with current stock" : "all bookings covered"}
           tone={kpis.bookings_at_risk ? "red" : "green"}
+          dark
         />
       )}
       <Tile

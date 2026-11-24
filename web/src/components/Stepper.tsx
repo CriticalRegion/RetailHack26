@@ -19,7 +19,7 @@ export function Stepper({ step }: { step: State["step"] }) {
           <li
             key={s.key}
             aria-current={active ? "step" : undefined}
-            className={`flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 shadow-xs ${active ? "" : done ? "" : "opacity-70"}`}
+            className={`flex items-center gap-3 rounded-[28px] border border-white bg-white px-3 py-2.5 shadow-xs ${active ? "" : done ? "" : "opacity-70"}`}
           >
             <span
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${

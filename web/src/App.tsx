@@ -54,12 +54,12 @@ export default function App() {
   const mock = getMode() === "mock";
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/80 backdrop-blur">
+    <div className="min-h-screen bg-[#ecebe7]">
+      <header className="sticky top-0 z-40 bg-[#ecebe7]/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
           <div>
-            <h1 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-900">
-              <span className="relative inline-block h-6 w-6 rounded-md bg-zinc-900"><span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-400" /></span>
+            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-zinc-900">
+              <span className="relative inline-block h-6 w-6 rounded-full bg-zinc-900"><span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[#d9f36a]" /></span>
               Iris <span className="text-sm font-normal text-zinc-500">· never run out of what's booked</span>
             </h1>
             <p className="mt-0.5 text-xs text-zinc-500">
@@ -68,18 +68,18 @@ export default function App() {
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {mock && (
-              <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20" title="API not reachable: showing recorded mocks">
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20" title="API not reachable: showing recorded mocks">
                 MOCK DATA
               </span>
             )}
-            <label className="flex h-8 items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 shadow-xs">
+            <label className="flex h-8 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 shadow-xs">
               <input type="checkbox" checked={state.live_search} disabled={busy || mock} onChange={(e) => run(() => api.live(e.target.checked))} />
               Live supplier search
-              <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${state.live_search ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" : "bg-zinc-50 text-zinc-600 ring-zinc-500/10"}`}>
+              <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${state.live_search ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" : "bg-zinc-50 text-zinc-600 ring-zinc-500/10"}`}>
                 {state.live_search ? "Tavily + Nebius" : "labelled fixture"}
               </span>
             </label>
-            <button disabled={busy} onClick={() => run(api.reset)} className="h-8 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40">
+            <button disabled={busy} onClick={() => run(api.reset)} className="h-8 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 shadow-xs transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40">
               Reset demo
             </button>
           </div>
@@ -139,7 +139,7 @@ export default function App() {
       </main>
 
       {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-card">
+        <div role="status" aria-live="polite" className="fixed bottom-4 right-4 z-50 max-w-sm rounded-[28px] border border-white bg-white px-4 py-3 shadow-card">
           <div className="flex items-start gap-3">
             <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${toastTone[toast.kind]}`} />
             <span className="text-sm text-zinc-800">{toast.msg}</span>
