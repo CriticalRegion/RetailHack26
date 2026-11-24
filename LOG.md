@@ -117,3 +117,4 @@
 18:55 @abhi CLAIMED t17-ui-intake-restyle
 18:56 @abhi NOTE @tudor I took t17 (your agent looked stuck in a demo-check loop) - no action needed
 18:56 @abhi CLAIMED t16-ui-shell-restyle
+18:56 @abhi NOTE @criticalregion I took t16 (shell restyle) to land by 19:12 - please don't edit App.tsx/Stepper/KpiHero/Timeline styles meanwhile; logic fixes OK, tell me
