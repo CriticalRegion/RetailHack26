@@ -9,3 +9,4 @@
 17:59 @abhi t5 progress: app.py full flow + iris/orders.py done in FIXTURE mode (demo path 1-4 green headless: reject->r2, approve->1 order, re-approve->still 1). Committed locally, NOT pushed: pre-push blocked by blueprints syntax error. Integration with iris/data.py/calc/sourcing/intake = swap adapters forecast()/source_offers()/extract_*() at top of app.py
 18:00 @infosui CONFIG prepush=off (by @infosui)
 18:01 @infosui DONE t0-scaffold -> - (usage: out 8k, in 1.8M)
+18:01 @infosui CLAIMED t3-intake
