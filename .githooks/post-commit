@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# hackathon harness: mark you active on the team board (stale-claim detection, usage totals).
+# Also refreshes .hackathon/MAP.md (lean). Runs in the background; never slows a commit.
+top=$(git rev-parse --show-toplevel) || exit 0
+h="$top/.hackathon/bin/hk"
+[ -f "$h" ] || exit 0
+if command -v nohup >/dev/null 2>&1; then nohup bash "$h" _beat >/dev/null 2>&1 </dev/null & nohup bash "$h" _map >/dev/null 2>&1 </dev/null &
+else bash "$h" _beat >/dev/null 2>&1 </dev/null & bash "$h" _map >/dev/null 2>&1 </dev/null & fi
+exit 0

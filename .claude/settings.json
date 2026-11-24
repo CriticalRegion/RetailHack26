@@ -1,0 +1,89 @@
+{
+  "model": "sonnet",
+  "extraKnownMarketplaces": {
+    "claudhino": {
+      "source": {
+        "source": "github",
+        "repo": "CriticalRegion/Claudhino-s_harnesses"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail",
+        "ref": "v5.3.3"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "hackathon@claudhino": true,
+    "ponytail@ponytail": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(hk *)",
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(pnpm *)",
+      "Bash(node *)",
+      "Bash(python3 *)",
+      "Bash(ls *)",
+      "Bash(grep *)",
+      "Bash(curl localhost*)",
+      "Bash(curl http://localhost*)",
+      "Bash(curl -s http://localhost*)",
+      "Bash(curl http://127.0.0.1*)",
+      "mcp__plugin_hackathon_context7",
+      "mcp__plugin_hackathon_playwright",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(git reset --hard*)",
+      "Bash(git clean *)",
+      "Bash(git checkout -- *)",
+      "Bash(git restore *)",
+      "Bash(git branch -D *)",
+      "Bash(hk auto on*)",
+      "Bash(hk night start*)",
+      "Bash(hk solo @*)",
+      "Bash(hk config set*)",
+      "Bash(hk config profile*)",
+      "Bash(hk off*)"
+    ],
+    "deny": [
+      "Read(**/node_modules/**)",
+      "Read(**/.next/**)",
+      "Read(**/dist/**)",
+      "Read(**/build/**)",
+      "Read(package-lock.json)",
+      "Read(pnpm-lock.yaml)",
+      "Read(yarn.lock)",
+      "Read(bun.lock)",
+      "Read(.env)",
+      "Read(.env.local)",
+      "Read(.env.*.local)",
+      "Read(.env.production)",
+      "Bash(cat .env*)",
+      "Bash(head .env*)",
+      "Bash(tail .env*)",
+      "Bash(less .env*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git push *+*)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.hackathon/bin/hk\" statusline",
+    "padding": 0
+  },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75"
+  }
+}

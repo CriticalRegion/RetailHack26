@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# hackathon harness launcher (project side). Git hooks, the board's merge driver and humans run this;
+# it finds the installed "hackathon" plugin and runs its engine for this project.
+root=$(cd "$(dirname "$0")/../.." && pwd -P)
+p=$(cat "$root/.hackathon/.plugin-root" 2>/dev/null || true)
+if [ -z "$p" ] || [ ! -f "$p/bin/hk" ]; then
+  p=${HK_PLUGIN_ROOT:-}
+  [ -n "$p" ] && [ -f "$p/bin/hk" ] || p=$(ls -td "$HOME"/.claude/plugins/cache/claudhino/hackathon/*/ 2>/dev/null | head -n1)
+  p=${p%/}
+fi
+if [ -z "$p" ] || [ ! -f "$p/bin/hk" ]; then
+  case "${1:-}" in _*|contract|peek|posttool|pretool|watch|permit|autostop|session-start|rules) exit 0;; esac
+  echo "hk: the hackathon plugin isn't installed here. In Claude Code: /plugin marketplace add CriticalRegion/Claudhino-s_harnesses, then /plugin install hackathon@claudhino"
+  exit 1
+fi
+if [ "${1:-}" = statusline ]; then   # fast path: straight to node, no shell engine in between
+  { [ -f "$root/.hackathon/.paused" ] || [ -f "$root/.hackathon/.off" ]; } && { echo "hackathon harness paused or off here"; exit 0; }
+  command -v node >/dev/null 2>&1 || exit 0
+  HH_ROOT=$root exec node "$p/bin/hh.js" statusline
+fi
+HK_ROOT=$root exec bash "$p/bin/hk" "$@"

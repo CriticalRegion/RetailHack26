@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# hackathon harness: keep main demoable. A push to main/master must pass `npm run check` (if package.json
+# defines it) and a syntax check of tracked Python files. Other branches push freely.
+# Bypass the checks in an emergency: HK_SKIP=1 git push. Turn them off for the team: hk config set prepush=off
+# After the checks, changes under contracts/ are announced to the team (hk contract).
+top=$(git rev-parse --show-toplevel) || exit 0
+hk="$top/.hackathon/bin/hk"
+{ [ -f "$top/.hackathon/.paused" ] || [ -f "$top/.hackathon/.off" ]; } && exit 0   # harness paused/off in this clone
+protect=0; alerts=()
+while read -r _lref lsha rref rsha; do
+  case $rref in refs/heads/main|refs/heads/master)
+    case $lsha in *[!0]*) protect=1
+      case $rsha in *[!0]*) git cat-file -e "$rsha^{commit}" 2>/dev/null \
+        && alerts+=("$rref $lsha $(git diff --name-only "$rsha" "$lsha" -- contracts/ | tr '\n' ' ')");; esac;;
+    esac;;
+  esac
+done
+[ $protect = 1 ] || exit 0
+cd "$top" || exit 0
+announce() { local a
+  for a in "${alerts[@]}"; do set -- $a; [ $# -gt 2 ] || continue
+    [ -f "$hk" ] || continue
+    if command -v nohup >/dev/null 2>&1; then nohup bash "$hk" contract "$@" >/dev/null 2>&1 </dev/null &
+    else bash "$hk" contract "$@" >/dev/null 2>&1 </dev/null & fi
+  done; }
+[ -n "${HK_SKIP:-}" ] && { announce; exit 0; }
+[ -f "$hk" ] && [ "$(bash "$hk" config get prepush 2>/dev/null)" = off ] && { announce; exit 0; }
+if [ -f package.json ] && grep -q '"check"[[:space:]]*:' package.json; then
+  echo "pre-push: npm run check (main must stay demoable; HK_SKIP=1 git push to bypass)" >&2
+  npm run -s check || { echo "pre-push: check failed, push to main blocked." >&2; exit 1; }
+fi
+PY=; for c in python3 python; do "$c" -c 'import sys' >/dev/null 2>&1 && { PY=$c; break; }; done   # skips the Windows Store stub
+if [ -n "$PY" ] && [ -n "$(git ls-files '*.py' | head -n1)" ]; then
+  echo "pre-push: python syntax check" >&2
+  git ls-files -z '*.py' | xargs -0 "$PY" -c '
+import sys
+bad = 0
+for f in sys.argv[1:]:
+    try: compile(open(f, "rb").read(), f, "exec")
+    except SyntaxError as e: bad = 1; print("  %s:%s: %s" % (f, e.lineno, e.msg), file=sys.stderr)
+    except OSError: pass
+sys.exit(bad)' || { echo "pre-push: Python syntax error, push to main blocked." >&2; exit 1; }
+fi
+announce
+exit 0
