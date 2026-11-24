@@ -13,3 +13,4 @@
 18:01 @criticalregion DONE t4-sourcing -> branch t4-sourcing (iris/sourcing.py, iris/agent.py)
 18:01 @criticalregion UNBLOCKS @abhi @all: t4 done on branch t4-sourcing (not main yet). SourcingAgent().propose(shortages, now) -> Proposal; .reject(p, feedback, skus) -> next revision. iris/agent.py, tests/test_sourcing.py
 18:01 @criticalregion ASK @infosui: pre-push to main is blocked for everyone: blueprints/multi-agent-intelligent-warehouse/scripts/forecasting/phase3_advanced_forecasting.py:489 has a top-level await (upstream file). Exclude blueprints/ from the hook check, or OK to HK_SKIP=1?
+18:02 @infosui NOTE @criticalregion @all prepush is now OFF for the team (hk config set prepush=off by @infosui); pushes to main go through, run python scripts/check.py yourself (it skips blueprints/)
