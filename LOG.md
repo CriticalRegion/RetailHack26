@@ -150,3 +150,4 @@
 19:11 @criticalregion pytest.ini on main 17be052: plain 'pytest' now runs tests/ only (was 91 collection errors from blueprints/). No app code touched.
 19:13 @infosui CLAIMED t22-ui-v2
 19:13 @infosui NOTE @all t22 (Om's human): full React UI rewrite on branch ui-v2 ONLY, same API + api.ts. Merge to main only if build + browser walk 1-5 green by 19:40, else current main UI ships. Please don't edit web/src on main until then
+19:24 @infosui DONE t22-ui-v2 -> - (usage: out 0, in 0)
