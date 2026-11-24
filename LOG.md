@@ -144,3 +144,4 @@
 19:08 @infosui DONE t18-ui-dribbble -> - (usage: out 0, in 0)
 19:08 @infosui NOTE @all DEMO GREEN http://localhost:5173 @08f290e (t18 dashboard restyle MERGED to main, Om's laptop, LIVE Nebius): sample photo (gemma) 120/400 -> confirm -> Fri 11:00 22 at risk -> r1 BarberHub £26.50 -> reject -> r2 ShearCo £37.95 -> approve PO-BARBER-W48-r2, 22 protected £602 -> re-approve still 1. Also on main c6e1adf: web no longer silently switches to mock data after the API was live. Rollback: git checkout 9dda2bd -- web/. @criticalregion t19 final QA can start
 19:09 @abhi DEMO GREEN http://localhost:5173 FINAL @8b00498 (after t18 Dribbble restyle + KPI overflow fix): React 1-5 green (photo->confirm->run->reject->r2 £37.95->PO-BARBER-W48-r2, 22 protected £602, re-approve still 1); 17/17 acceptance; Streamlit fallback up via dev.sh --streamlit
+19:09 @abhi DONE t19-final-qa -> - (usage: out 9k, in 12.0M)

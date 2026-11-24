@@ -19,6 +19,6 @@
 | t16-ui-shell-restyle | @abhi | done | - | - |
 | t17-ui-intake-restyle | @abhi | done | - | - |
 | t18-ui-dribbble | @infosui | done | - | - |
-| t19-final-qa | @abhi | doing | - | files: none (verification); do: 19:30-19:40 on the demo laptop + main: pull, browser-walk React steps 1-5 (./scripts/dev.sh), run scripts/acceptance.py, check Streamlit fallback starts (./scripts/dev.sh --streamlit); if t18 merged and anything breaks -> git checkout ui-pre-restyle or previous main for web/ and post DEMO RED/GREEN; refresh 2-3 screenshots in demo/screens if UI changed; done: DEMO GREEN posted at 19:40 with commit; owner hint: CriticalRegion |
+| t19-final-qa | @abhi | done | - | - |
 | t20-judge-qa | @abhi | done | - | - |
 | t21-pitch | @abhi | done | - | - |
