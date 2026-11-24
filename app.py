@@ -162,8 +162,25 @@ for _l in book.inbound:
         received[_l.sku] = received.get(_l.sku, 0) + _l.qty
 baseline = forecast({k: v - received.get(k, 0) for k, v in ss.on_hand.items()}, [], ss.bookings)  # no orders
 st.header("2 · Next 7 days")
+# KPI hero: what's at stake now, or what the order protected
+_hb, _hl = baseline[HERO], fc[HERO]
+_n_risk, _stake = protected_bookings(baseline, {})  # every booking at risk without an order
+k1, k2, k3 = st.columns(3)
+if _hl.first_at_risk:
+    k1.metric("Bookings at risk", len(_hl.at_risk), delta="act before it runs out", delta_color="inverse")
+    k2.metric("Runs out", f"{_hl.first_at_risk['time']:%a %H:%M}",
+              help=f"{_hl.first_at_risk['id']} {_hl.first_at_risk['service'].lower()}")
+    k3.metric("Booking revenue at stake", f"£{_stake:g}")
+elif _hb.first_at_risk:
+    _n_prot, _rev = protected_bookings(baseline, fc)
+    k1.metric("Bookings at risk", 0, delta=f"{_n_prot} protected", delta_color="normal")
+    k2.metric("Status", "Covered")
+    k3.metric("Booking revenue protected", f"£{_rev:g}")
 for sku, line in fc.items():
     p = PRODUCTS[sku]
+    if not line.uncovered and sku != HERO:
+        st.caption(f"No shortage: {p['name']} ({line.on_hand:g} on hand, {line.usage:g} booked)")
+        continue
     cols = st.columns(4)
     cols[0].metric(p["name"], f"{line.usage:g} {p['unit']} booked")
     cols[1].metric("On hand", f"{line.on_hand:g}")
@@ -179,16 +196,23 @@ for sku, line in fc.items():
         st.success(f"Covered: incoming stock protects all {len(baseline[sku].at_risk)} bookings that were at risk.")
     if sku == HERO:
         df = pd.DataFrame(line.series, columns=["time", "projected"])
-        chart = alt.Chart(df).mark_line(interpolate="step-after").encode(
+        chart = alt.Chart(df).mark_line(interpolate="step-after", color="#059669").encode(
             x=alt.X("time:T", title=None), y=alt.Y("projected:Q", title=f"projected {p['unit']}"))
         zero = alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color="#c0392b", strokeDash=[4, 4]).encode(y="y:Q")
         layers = [chart, zero]
+        if line.series != baseline[sku].series:  # an order changed the curve: show what it would have been
+            base_df = pd.DataFrame(baseline[sku].series, columns=["time", "projected"])
+            layers.insert(0, alt.Chart(base_df).mark_line(interpolate="step-after", color="#9ca3af",
+                                                          strokeDash=[6, 4]).encode(
+                x="time:T", y="projected:Q", tooltip=[alt.Tooltip("projected:Q", title="without order")]))
         if line.first_at_risk:
             pt = pd.DataFrame([{"time": line.first_at_risk["time"], "projected": 0,
                                 "label": f"first at risk: {line.first_at_risk['time']:%a %H:%M}"}])
             layers.append(alt.Chart(pt).mark_point(color="#c0392b", size=120, filled=True).encode(
                 x="time:T", y="projected:Q", tooltip=["label"]))
-        st.altair_chart(alt.layer(*layers).properties(height=220), width="stretch")
+        st.altair_chart(alt.layer(*layers).properties(height=220, title="Projected clay stock"
+                                                       + (" (dashed: without order)" if line.series != baseline[sku].series else "")),
+                        width="stretch")
 
 fc_before = forecast(ss.on_hand, [], ss.bookings)
 
