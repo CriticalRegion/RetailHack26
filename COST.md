@@ -1,4 +1,4 @@
 | id | usage |
 |---|---|
-| @abhi | 2.98 |
+| @abhi | 4.39 |
 | @infosui | opus out=9k sonnet out=32k  |
